@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>BGMI LIVE VIEW - STABLE</title>
+    <title>BGMI LIVE VIEW - FINAL</title>
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
     <style>
         body { margin:0; background:#00ff00; overflow:hidden; font-family:'Bebas Neue'; display:flex; align-items:flex-end; height:100vh; padding-bottom:120px; padding-left:100px; }
@@ -20,7 +20,6 @@
         <div class="name-strip" id="n"></div>
     </div>
     <script>
-        // MATCHING URL: liveData.json
         const fbURL = "https://bgmi-overlay-default-rtdb.firebaseio.com/liveData.json"; 
         let lastTeamName = "";
 
@@ -48,7 +47,7 @@
                         lastTeamName = data.name;
                     }, 400);
                 }
-            } catch(e) { console.log("Waiting for cloud data..."); }
+            } catch(e) { }
         }
         setInterval(listen, 1000);
     </script>
