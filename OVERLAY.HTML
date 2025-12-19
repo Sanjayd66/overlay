@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>BGMI AI ADMIN - OCR FIXED</title>
+    <title>BGMI AI ADMIN - STABLE V2</title>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
     <style>
@@ -47,7 +47,7 @@
             <video id="v" autoplay muted></video>
             <canvas id="sel-canvas"></canvas>
         </div>
-        <div style="font-size:12px;color:grey">AI PREVIEW:</div>
+        <div style="font-size:12px;color:grey">AI SCAN PREVIEW (Ensure TeamX is clear):</div>
         <canvas id="debug-canvas"></canvas>
         <table class="db-table">
             <thead><tr><th>#</th><th>TEAM NAME</th><th>LOGO</th><th>BDR</th><th>BG</th></tr></thead>
@@ -57,15 +57,16 @@
 </div>
 
 <script>
+    // FINAL DATABASE PATH
     const fbURL = "https://bgmi-overlay-default-rtdb.firebaseio.com/liveData.json"; 
+    
     const v = document.getElementById('v'), selC = document.getElementById('sel-canvas'), sCtx = selC.getContext('2d');
     const dC = document.getElementById('debug-canvas'), dCtx = dC.getContext('2d');
     
     let crop = { x: 0, y: 0, w: 0, h: 0, drawing: false };
     let worker = null, lastSentId = null, isScanning = false;
 
-    // DB Setup
-    const teamDB = JSON.parse(localStorage.getItem('bgmi_v_final_1')) || {};
+    const teamDB = JSON.parse(localStorage.getItem('bgmi_v_final_v2')) || {};
     const tbody = document.getElementById('dbBody');
     for (let i = 1; i <= 25; i++) {
         if(!teamDB[i]) teamDB[i] = { name: `TEAM ${i}`, logo: `${i}`, bdr: '#ffffff', sbg: '#ff5a00' };
@@ -82,7 +83,7 @@
 
     function updateDB(id, key, val) { 
         teamDB[id][key] = val; 
-        localStorage.setItem('bgmi_v_final_1', JSON.stringify(teamDB)); 
+        localStorage.setItem('bgmi_v_final_v2', JSON.stringify(teamDB)); 
         if(lastSentId == id) pushToCloud(teamDB[id]);
     }
 
@@ -98,8 +99,8 @@
             tessedit_char_whitelist: '0123456789TEAMteam',
             tessedit_pageseg_mode: '7'
         });
-        document.getElementById('status').innerText = "AI ACTIVE";
-        setInterval(scan, 300); // Thoda slow scan for better accuracy
+        document.getElementById('status').innerText = "AI SCANNING...";
+        setInterval(scan, 350); 
     }
 
     async function scan() {
@@ -110,16 +111,14 @@
         const sy = v.videoHeight / selC.height;
         
         dC.width = 400; dC.height = 100;
-        // Sharpen filter for OCR
-        dCtx.filter = "grayscale(1) contrast(5) brightness(1.1)";
+        dCtx.filter = "grayscale(1) contrast(5) brightness(1.2)";
         dCtx.drawImage(v, crop.x*sx, crop.y*sy, crop.w*sx, crop.h*sy, 0, 0, 400, 100);
         
         const { data: { text, confidence } } = await worker.recognize(dC);
         isScanning = false;
 
         let cleanText = text.toUpperCase().replace(/\s+/g, ""); 
-        // Logic fix: Extracting number directly
-        let match = cleanText.match(/(\d+)/);
+        let match = cleanText.match(/(\d+)/); // Extracts first number found
 
         if(confidence > 45 && match) {
             let num = parseInt(match[0]);
@@ -130,7 +129,6 @@
             }
         }
     }
-
     selC.onmousedown = (e) => { crop.x = e.offsetX; crop.y = e.offsetY; crop.drawing = true; };
     selC.onmousemove = (e) => { if(crop.drawing) { sCtx.clearRect(0,0,selC.width,selC.height); sCtx.strokeStyle = "#0f0"; sCtx.lineWidth=2; sCtx.strokeRect(crop.x, crop.y, e.offsetX-crop.x, e.offsetY-crop.y); } };
     selC.onmouseup = (e) => { crop.w = Math.abs(e.offsetX-crop.x); crop.h = Math.abs(e.offsetY-crop.y); crop.drawing = false; };
