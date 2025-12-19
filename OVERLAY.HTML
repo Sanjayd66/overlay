@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>BGMI AI - SECURE ADMIN</title>
+    <title>BGMI AI - SECURE ADMIN (TEAM SCAN)</title>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
     <style>
@@ -18,7 +18,7 @@
         .preview-box { position: relative; width: 100%; background: #000; border: 1px solid #444; line-height: 0; margin-bottom: 20px; }
         #v { width: 100%; height: auto; }
         #sel-canvas { position: absolute; top:0; left:0; width:100%; height:100%; cursor: crosshair; }
-        #debug-canvas { width: 100%; height: 60px; background: #fff; margin-bottom: 10px; border: 2px solid red; }
+        #debug-canvas { width: 100%; height: 80px; background: #fff; margin-bottom: 10px; border: 2px solid red; }
         .db-table { width: 100%; border-collapse: collapse; font-size: 10px; }
         .db-table input { background: #1a1a1a; color: #fff; border: 1px solid #333; width: 92%; padding: 4px; }
     </style>
@@ -26,6 +26,7 @@
 <body>
 
 <script>
+    // --- SECURITY PIN ---
     const correctPin = "1234"; 
     const userPin = prompt("Admin Password daalein:");
     if (userPin === correctPin) {
@@ -47,6 +48,7 @@
             <video id="v" autoplay muted></video>
             <canvas id="sel-canvas"></canvas>
         </div>
+        <div style="font-size: 12px; color: #888;">AI SCAN PREVIEW (4X UPSCALE):</div>
         <canvas id="debug-canvas"></canvas>
         <table class="db-table">
             <thead><tr><th>#</th><th>TEAM NAME</th><th>LOGO</th><th>BORDER</th><th>THEME BG</th></tr></thead>
@@ -59,33 +61,71 @@
     const fbURL = "https://bgmi-overlay-default-rtdb.firebaseio.com/.json"; 
     const v = document.getElementById('v'), selC = document.getElementById('sel-canvas'), sCtx = selC.getContext('2d');
     const dC = document.getElementById('debug-canvas'), dCtx = dC.getContext('2d');
+    
     let crop = { x: 0, y: 0, w: 0, h: 0, drawing: false };
     let worker = null, lastSentId = null, votes = {}, scanCount = 0, isScanning = false;
+
     const teamDB = JSON.parse(localStorage.getItem('bgmi_v14_db')) || {};
     const tbody = document.getElementById('dbBody');
     for (let i = 1; i <= 25; i++) {
         if(!teamDB[i]) teamDB[i] = { name: `TEAM ${i}`, logo: `${i}`, bdr: '#ffffff', sbg: '#ff5a00' };
         tbody.innerHTML += `<tr><td>${i}</td><td><input type='text' value='${teamDB[i].name}' onchange='updateDB(${i},"name",this.value)'></td><td><input type='text' value='${teamDB[i].logo}' onchange='updateDB(${i},"logo",this.value)'></td><td><input type='color' value='${teamDB[i].bdr}' onchange='updateDB(${i},"bdr",this.value)'></td><td><input type='color' value='${teamDB[i].sbg}' onchange='updateDB(${i},"sbg",this.value)'></td></tr>`;
     }
-    async function pushToCloud(data) { await fetch(fbURL, { method: 'PUT', body: JSON.stringify(data) }); }
+
+    async function pushToCloud(data) { try { await fetch(fbURL, { method: 'PUT', body: JSON.stringify(data) }); } catch(e){} }
     function updateDB(id, key, val) { teamDB[id][key] = val; localStorage.setItem('bgmi_v14_db', JSON.stringify(teamDB)); if(lastSentId == id) pushToCloud(teamDB[id]); }
-    async function startApp() { const stream = await navigator.mediaDevices.getDisplayMedia({ video: { width: 1920, height: 1080 } }); v.srcObject = stream; v.onloadedmetadata = () => { selC.width = v.clientWidth; selC.height = v.clientHeight; initOCR(); }; }
-    async function initOCR() { worker = await Tesseract.createWorker('eng'); await worker.setParameters({ tessedit_char_whitelist: '0123456789SBGIOZT', tessedit_pageseg_mode: '7' }); setInterval(scan, 80); }
+    
+    async function startApp() {
+        const stream = await navigator.mediaDevices.getDisplayMedia({ video: { width: 1920, height: 1080 } });
+        v.srcObject = stream;
+        v.onloadedmetadata = () => { selC.width = v.clientWidth; selC.height = v.clientHeight; initOCR(); };
+    }
+
+    async function initOCR() {
+        worker = await Tesseract.createWorker('eng');
+        await worker.setParameters({ 
+            tessedit_char_whitelist: '0123456789TEAMteam', 
+            tessedit_pageseg_mode: '7' 
+        });
+        document.getElementById('status').innerText = "AI ACTIVE";
+        setInterval(scan, 100);
+    }
+
     async function scan() {
         if(!v.srcObject || crop.w < 5 || isScanning) return;
-        isScanning = true; const sx = v.videoWidth / selC.width, sy = v.videoHeight / selC.height; dC.width = 160; dC.height = 80;
-        dCtx.filter = "grayscale(1) contrast(10)"; dCtx.drawImage(v, crop.x*sx, crop.y*sy, crop.w*sx, crop.h*sy, 0, 0, 160, 80);
-        const { data: { text, confidence } } = await worker.recognize(dC); isScanning = false;
-        let num = parseInt(text.replace(/\D/g, ""));
-        if(confidence > 60 && num >= 3 && num <= 25) {
-            votes[num] = (votes[num] || 0) + 1;
-            if(++scanCount >= 3) {
-                let winner = parseInt(Object.keys(votes).reduce((a, b) => votes[a] > votes[b] ? a : b));
-                if(winner !== lastSentId) { lastSentId = winner; pushToCloud(teamDB[winner]); document.getElementById('status').innerText = "SENT TEAM: " + winner; }
-                votes = {}; scanCount = 0;
+        isScanning = true;
+        
+        const sx = v.videoWidth / selC.width;
+        const sy = v.videoHeight / selC.height;
+        
+        // 4X Scaling for small "TeamX" text
+        dC.width = 400; dC.height = 120;
+        dCtx.filter = "grayscale(1) contrast(3) brightness(1.2)";
+        dCtx.drawImage(v, crop.x*sx, crop.y*sy, crop.w*sx, crop.h*sy, 0, 0, 400, 120);
+        
+        const { data: { text, confidence } } = await worker.recognize(dC);
+        isScanning = false;
+
+        let cleanText = text.toUpperCase().replace(/\s+/g, ""); 
+        let match = cleanText.match(/TEAM(\d+)/) || cleanText.match(/T(\d+)/) || cleanText.match(/(\d+)/);
+
+        if(confidence > 50 && match) {
+            let num = parseInt(match[1]);
+            if(num >= 1 && num <= 25) {
+                votes[num] = (votes[num] || 0) + 1;
+                if(++scanCount >= 3) {
+                    let winner = parseInt(Object.keys(votes).reduce((a, b) => votes[a] > votes[b] ? a : b));
+                    if(winner !== lastSentId) {
+                        lastSentId = winner;
+                        pushToCloud(teamDB[winner]);
+                        document.getElementById('status').innerText = "SENT: TEAM " + winner;
+                    }
+                    votes = {}; scanCount = 0;
+                }
             }
         }
     }
+
     selC.onmousedown = (e) => { crop.x = e.offsetX; crop.y = e.offsetY; crop.drawing = true; };
     selC.onmousemove = (e) => { if(crop.drawing) { sCtx.clearRect(0,0,selC.width,selC.height); sCtx.strokeStyle = "#0f0"; sCtx.strokeRect(crop.x, crop.y, e.offsetX-crop.x, e.offsetY-crop.y); } };
     selC.onmouseup = (e) => { crop.w = Math.abs(e.offsetX-crop.x); crop.h = Math.abs(e.offsetY-crop.y); crop.drawing = false; };
