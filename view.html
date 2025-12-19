@@ -2,16 +2,16 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>BGMI LIVE VIEW - FINAL</title>
+    <title>BGMI LIVE VIEW - FIXED</title>
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
     <style>
         body { margin:0; background:#00ff00; overflow:hidden; font-family:'Bebas Neue'; display:flex; align-items:flex-end; height:100vh; padding-bottom:120px; padding-left:100px; }
         #container { display:flex; align-items: flex-start; opacity:0; transition: 0.4s ease; transform: translateX(-20px); }
         .active { opacity:1!important; transform: translateX(0)!important; }
-        .logo-box { background: var(--sbg, #ff5a00); width: 130px; height: 130px; display: flex; align-items: center; justify-content: center; border: 5px solid var(--bdr, #fff); z-index: 10; }
+        .logo-box { background: var(--sbg, #ff5a00); width: 130px; height: 130px; display: flex; align-items: center; justify-content: center; border: 5px solid var(--bdr, #fff); z-index: 10; box-shadow: 10px 10px 20px rgba(0,0,0,0.3); }
         .logo-box span { color: white; font-size: 85px; font-weight: bold; }
         .logo-box img { width: 90%; height: 90%; object-fit: contain; }
-        .name-strip { background: var(--sbg, #ff5a00); height: 55px; display: flex; align-items: center; padding: 0 45px 0 25px; color: white; font-size: 38px; clip-path: polygon(0 0, 95% 0, 100% 100%, 0 100%); margin-left: -2px; margin-top: 15px; }
+        .name-strip { background: var(--sbg, #ff5a00); height: 55px; display: flex; align-items: center; padding: 0 45px 0 25px; color: white; font-size: 38px; clip-path: polygon(0 0, 95% 0, 100% 100%, 0 100%); margin-left: -2px; margin-top: 15px; box-shadow: 5px 5px 15px rgba(0,0,0,0.2); }
     </style>
 </head>
 <body>
@@ -21,32 +21,22 @@
     </div>
     <script>
         const fbURL = "https://bgmi-overlay-default-rtdb.firebaseio.com/liveData.json"; 
-        let lastTeamName = "";
-
+        let lastId = "";
         async function listen() {
             try {
                 const res = await fetch(fbURL);
                 const data = await res.json();
-                if(!data) return;
-
-                if(data.name !== lastTeamName) {
-                    const el = document.getElementById('container');
-                    el.classList.remove('active');
-
-                    setTimeout(() => {
-                        document.body.style.setProperty('--bdr', data.bdr);
-                        document.body.style.setProperty('--sbg', data.sbg);
-                        document.getElementById('n').innerText = data.name.toUpperCase();
-                        
-                        const l = document.getElementById('l');
-                        l.innerHTML = (data.logo && data.logo.startsWith('http')) 
-                            ? `<img src="${data.logo}">` 
-                            : `<span>${data.logo}</span>`;
-                        
-                        el.classList.add('active');
-                        lastTeamName = data.name;
-                    }, 400);
-                }
+                if(!data || data.name === lastId) return;
+                const el = document.getElementById('container');
+                el.classList.remove('active');
+                setTimeout(() => {
+                    document.body.style.setProperty('--bdr', data.bdr);
+                    document.body.style.setProperty('--sbg', data.sbg);
+                    document.getElementById('n').innerText = data.name.toUpperCase();
+                    document.getElementById('l').innerHTML = `<span>${data.logo}</span>`;
+                    el.classList.add('active');
+                    lastId = data.name;
+                }, 400);
             } catch(e) { }
         }
         setInterval(listen, 1000);
