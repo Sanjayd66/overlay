@@ -27,7 +27,7 @@
 
 <script>
     const correctPin = "1234"; 
-    const userPin = prompt("Admin Password:");
+    const userPin = prompt("Admin Password daalein:");
     if (userPin === correctPin) {
         window.onload = () => { document.getElementById('admin-wrapper').style.display = 'flex'; };
     } else {
@@ -47,7 +47,7 @@
             <video id="v" autoplay muted></video>
             <canvas id="sel-canvas"></canvas>
         </div>
-        <div style="font-size:12px;color:#888;">AI PREVIEW (TeamX should be clear):</div>
+        <div style="font-size:12px;color:#888;">AI SCAN PREVIEW (4X UPSCALE):</div>
         <canvas id="debug-canvas"></canvas>
         <table class="db-table">
             <thead><tr><th>#</th><th>TEAM NAME</th><th>LOGO</th><th>BDR</th><th>BG</th></tr></thead>
@@ -57,7 +57,7 @@
 </div>
 
 <script>
-    // FINAL DATABASE PATH
+    // FIX: Using a specific path 'liveData' so both files sync to same location
     const fbURL = "https://bgmi-overlay-default-rtdb.firebaseio.com/liveData.json"; 
     
     const v = document.getElementById('v'), selC = document.getElementById('sel-canvas'), sCtx = selC.getContext('2d');
@@ -66,7 +66,7 @@
     let crop = { x: 0, y: 0, w: 0, h: 0, drawing: false };
     let worker = null, lastSentId = null, votes = {}, scanCount = 0, isScanning = false;
 
-    const teamDB = JSON.parse(localStorage.getItem('bgmi_db_v10')) || {};
+    const teamDB = JSON.parse(localStorage.getItem('bgmi_db_vfinal')) || {};
     const tbody = document.getElementById('dbBody');
     for (let i = 1; i <= 25; i++) {
         if(!teamDB[i]) teamDB[i] = { name: `TEAM ${i}`, logo: `${i}`, bdr: '#ffffff', sbg: '#ff5a00' };
@@ -78,12 +78,12 @@
     }
 
     async function pushToCloud(data) {
-        try { await fetch(fbURL, { method: 'PUT', body: JSON.stringify(data) }); } catch (e) { }
+        try { await fetch(fbURL, { method: 'PUT', body: JSON.stringify(data) }); } catch (e) { console.error("Cloud Error"); }
     }
 
     function updateDB(id, key, val) { 
         teamDB[id][key] = val; 
-        localStorage.setItem('bgmi_db_v10', JSON.stringify(teamDB)); 
+        localStorage.setItem('bgmi_db_vfinal', JSON.stringify(teamDB)); 
         if(lastSentId == id) pushToCloud(teamDB[id]);
     }
 
@@ -99,8 +99,8 @@
             tessedit_char_whitelist: '0123456789TEAMteam',
             tessedit_pageseg_mode: '7'
         });
-        document.getElementById('status').innerText = "AI SCANNING...";
-        setInterval(scan, 150);
+        document.getElementById('status').innerText = "AI ACTIVE";
+        setInterval(scan, 200);
     }
 
     async function scan() {
