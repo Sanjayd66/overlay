@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>BGMI LIVE VIEW</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
+    <style>
+        /* Green Screen Background for Transparency */
+        body { margin:0; background:#00ff00; overflow:hidden; font-family:'Bebas Neue'; display:flex; align-items:flex-end; height:100vh; padding-bottom:150px; padding-left:100px; }
+        #container { display:flex; align-items: flex-start; opacity:0; transform:translateX(-50px); transition:0.4s ease-out; }
+        .active { opacity:1!important; transform:translateX(0)!important; }
+        .logo-box { background: var(--sbg); width: 110px; height: 110px; display: flex; align-items: center; justify-content: center; border: 5px solid var(--bdr); z-index: 10; box-sizing: border-box; }
+        .logo-box img { width: 90%; height: 90%; object-fit: contain; }
+        .logo-box span { color: white; font-size: 70px; }
+        .name-strip { background: var(--sbg); height: 45px; display: flex; align-items: center; padding: 0 50px 0 20px; color: white; font-size: 32px; letter-spacing: 1.5px; clip-path: polygon(0 0, 95% 0, 100% 100%, 0 100%); margin-left: -1px; }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div class="logo-box" id="l"></div>
+        <div class="name-strip" id="n"></div>
+    </div>
+    <script>
+        const fbURL = "https://bgmi-overlay-default-rtdb.firebaseio.com/.json"; 
+        async function listen() {
+            try {
+                const res = await fetch(fbURL);
+                const d = await res.json();
+                if(!d) return;
+                const el = document.getElementById('container');
+                const nameEl = document.getElementById('n');
+                if(nameEl.innerText !== d.name.toUpperCase()) {
+                    el.classList.remove('active');
+                    setTimeout(() => {
+                        document.body.style.setProperty('--bdr', d.bdr);
+                        document.body.style.setProperty('--sbg', d.sbg);
+                        nameEl.innerText = d.name.toUpperCase();
+                        const l = document.getElementById('l');
+                        l.innerHTML = d.logo.startsWith('http') ? `<img src="${d.logo}">` : `<span>${d.logo}</span>`;
+                        el.classList.add('active');
+                    }, 100);
+                }
+            } catch(e) { }
+        }
+        setInterval(listen, 1000);
+    </script>
+</body>
+</html>
