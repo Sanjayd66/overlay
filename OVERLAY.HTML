@@ -2,11 +2,12 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>BGMI AI - FINAL TRANSPARENT LOGO BG</title>
+    <title>BGMI AI ADMIN - OCR FIXED</title>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
     <style>
         :root { --orange: #ff5a00; }
+        #admin-wrapper { display: none; } 
         body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #0a0a0a; color: white; display: flex; height: 100vh; overflow: hidden; }
         #admin { width: 480px; background: #111; border-right: 2px solid var(--orange); padding: 20px; overflow-y: auto; }
         .btn-group { display: flex; gap: 10px; margin-bottom: 20px; }
@@ -17,109 +18,72 @@
         .preview-box { position: relative; width: 100%; background: #000; border: 1px solid #444; line-height: 0; margin-bottom: 20px; }
         #v { width: 100%; height: auto; }
         #sel-canvas { position: absolute; top:0; left:0; width:100%; height:100%; cursor: crosshair; }
+        #debug-canvas { width: 100%; height: 100px; background: #fff; margin-bottom: 10px; border: 2px solid red; }
         .db-table { width: 100%; border-collapse: collapse; font-size: 10px; }
-        .db-table th { background: #222; color: var(--orange); padding: 5px; }
-        .db-table td { padding: 5px; border-bottom: 1px solid #222; }
         .db-table input { background: #1a1a1a; color: #fff; border: 1px solid #333; width: 92%; padding: 4px; }
     </style>
 </head>
 <body>
 
-<div id="admin">
-    <div class="btn-group">
-        <button class="btn btn-start" onclick="startApp()">1. Start Capture</button>
-        <button class="btn btn-pop" onclick="openOverlay()">2. Open Output</button>
+<script>
+    const correctPin = "1234"; 
+    const userPin = prompt("Admin Password:");
+    if (userPin === correctPin) {
+        window.onload = () => { document.getElementById('admin-wrapper').style.display = 'flex'; };
+    } else {
+        alert("Access Denied!");
+        document.body.innerHTML = "<h1>ACCESS DENIED</h1>";
+    }
+</script>
+
+<div id="admin-wrapper" style="width: 100%;">
+    <div id="admin">
+        <div class="btn-group">
+            <button class="btn btn-start" onclick="startApp()">1. Start Capture</button>
+            <button class="btn btn-pop" onclick="window.open('view.html','_blank')">2. View Output</button>
+        </div>
+        <div id="status" class="status">AI READY</div>
+        <div class="preview-box">
+            <video id="v" autoplay muted></video>
+            <canvas id="sel-canvas"></canvas>
+        </div>
+        <div style="font-size:12px;color:grey">AI PREVIEW:</div>
+        <canvas id="debug-canvas"></canvas>
+        <table class="db-table">
+            <thead><tr><th>#</th><th>TEAM NAME</th><th>LOGO</th><th>BDR</th><th>BG</th></tr></thead>
+            <tbody id="dbBody"></tbody>
+        </table>
     </div>
-    <div id="status" class="status">OFFLINE</div>
-    <div class="preview-box">
-        <video id="v" autoplay muted></video>
-        <canvas id="sel-canvas"></canvas>
-    </div>
-    <table class="db-table">
-        <thead><tr><th>#</th><th>TEAM</th><th>LOGO URL/TEXT</th><th>BORDER</th><th>STRIP BG</th></tr></thead>
-        <tbody id="dbBody"></tbody>
-    </table>
 </div>
 
 <script>
+    const fbURL = "https://bgmi-overlay-default-rtdb.firebaseio.com/liveData.json"; 
     const v = document.getElementById('v'), selC = document.getElementById('sel-canvas'), sCtx = selC.getContext('2d');
-    const bc = new BroadcastChannel('bgmi_final_v10');
+    const dC = document.getElementById('debug-canvas'), dCtx = dC.getContext('2d');
     
     let crop = { x: 0, y: 0, w: 0, h: 0, drawing: false };
-    let worker = null, lastSentId = null, votes = {}, scanCount = 0, isScanning = false;
+    let worker = null, lastSentId = null, isScanning = false;
 
-    const teamDB = JSON.parse(localStorage.getItem('bgmi_v10_db')) || {};
+    // DB Setup
+    const teamDB = JSON.parse(localStorage.getItem('bgmi_v_final_1')) || {};
     const tbody = document.getElementById('dbBody');
     for (let i = 1; i <= 25; i++) {
         if(!teamDB[i]) teamDB[i] = { name: `TEAM ${i}`, logo: `${i}`, bdr: '#ffffff', sbg: '#ff5a00' };
-        tbody.innerHTML += `<tr>
-            <td>${i}</td>
+        tbody.innerHTML += `<tr><td>${i}</td>
             <td><input type="text" value="${teamDB[i].name}" onchange="updateDB(${i},'name',this.value)"></td>
             <td><input type="text" value="${teamDB[i].logo}" onchange="updateDB(${i},'logo',this.value)"></td>
             <td><input type="color" value="${teamDB[i].bdr}" onchange="updateDB(${i},'bdr',this.value)"></td>
-            <td><input type="color" value="${teamDB[i].sbg}" onchange="updateDB(${i},'sbg',this.value)"></td>
-        </tr>`;
+            <td><input type="color" value="${teamDB[i].sbg}" onchange="updateDB(${i},'sbg',this.value)"></td></tr>`;
+    }
+
+    async function pushToCloud(data) {
+        try { await fetch(fbURL, { method: 'PUT', body: JSON.stringify(data) }); } catch (e) { }
     }
 
     function updateDB(id, key, val) { 
         teamDB[id][key] = val; 
-        localStorage.setItem('bgmi_v10_db', JSON.stringify(teamDB)); 
-        if(lastSentId == id) bc.postMessage(teamDB[id]);
-    }
-
-    function openOverlay() {
-        let win = window.open("", "Overlay", "width=1920,height=1080");
-        win.document.write(`
-            <html><head><link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
-            <style>
-                body { margin:0; background:#00ff00; overflow:hidden; font-family:'Bebas Neue'; display:flex; align-items:flex-end; height:100vh; padding-bottom:150px; padding-left:100px; }
-                #container { display:flex; align-items: flex-start; opacity:0; transform:translateX(-50px); transition:0.3s ease-out; }
-                .active { opacity:1!important; transform:translateX(0)!important; }
-                
-                /* Logo Box: Transparent BG + All 4 Sides Border */
-                .logo-box { 
-                    background: transparent; 
-                    width: 110px; height: 110px; 
-                    display: flex; align-items: center; justify-content: center; 
-                    color: white; font-size: 75px; 
-                    border: 5px solid var(--bdr); /* Charo taraf border */
-                    z-index: 10;
-                    box-sizing: border-box;
-                }
-                .logo-box img { width: 90%; height: 90%; object-fit: contain; }
-
-                /* Name Strip: Top Aligned */
-                .name-strip { 
-                    background: var(--sbg);
-                    height: 45px; 
-                    display: flex; align-items: center; 
-                    padding: 0 50px 0 20px; color: white; font-size: 32px; 
-                    letter-spacing: 1.5px;
-                    clip-path: polygon(0 0, 95% 0, 100% 100%, 0 100%);
-                    margin-left: -2px; /* Slight overlap for clean look */
-                }
-            </style></head>
-            <body>
-                <div id="container"><div class="logo-box" id="l"></div><div class="name-strip" id="n"></div></div>
-                <script>
-                    const bc = new BroadcastChannel('bgmi_final_v10');
-                    bc.onmessage = (e) => {
-                        const d = e.data;
-                        const el = document.getElementById('container');
-                        el.classList.remove('active');
-                        setTimeout(() => {
-                            document.body.style.setProperty('--bdr', d.bdr);
-                            document.body.style.setProperty('--sbg', d.sbg);
-                            document.getElementById('n').innerText = d.name.toUpperCase();
-                            const l = document.getElementById('l');
-                            if(d.logo.startsWith('http')) { l.innerHTML = '<img src="'+d.logo+'">'; }
-                            else { l.innerHTML = d.logo; }
-                            el.classList.add('active');
-                        }, 100);
-                    };
-                <\/script>
-            </body></html>
-        `);
+        localStorage.setItem('bgmi_v_final_1', JSON.stringify(teamDB)); 
+        if(lastSentId == id) pushToCloud(teamDB[id]);
     }
 
     async function startApp() {
@@ -130,47 +94,45 @@
 
     async function initOCR() {
         worker = await Tesseract.createWorker('eng');
-        await worker.setParameters({ tessedit_char_whitelist: '0123456789', tessedit_pageseg_mode: '7' });
-        document.getElementById('status').innerText = "OCR 100% STABLE";
-        setInterval(scan, 100);
+        await worker.setParameters({ 
+            tessedit_char_whitelist: '0123456789TEAMteam',
+            tessedit_pageseg_mode: '7'
+        });
+        document.getElementById('status').innerText = "AI ACTIVE";
+        setInterval(scan, 300); // Thoda slow scan for better accuracy
     }
 
     async function scan() {
         if(!v.srcObject || crop.w < 5 || isScanning) return;
         isScanning = true;
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        const sx = v.videoWidth / selC.width, sy = v.videoHeight / selC.height;
-        canvas.width = 160; canvas.height = 80;
-        ctx.filter = "grayscale(1) contrast(8) brightness(1.2)";
-        ctx.drawImage(v, crop.x*sx, crop.y*sy, crop.w*sx, crop.h*sy, 0, 0, 160, 80);
         
-        const { data: { text, confidence } } = await worker.recognize(canvas);
+        const sx = v.videoWidth / selC.width;
+        const sy = v.videoHeight / selC.height;
+        
+        dC.width = 400; dC.height = 100;
+        // Sharpen filter for OCR
+        dCtx.filter = "grayscale(1) contrast(5) brightness(1.1)";
+        dCtx.drawImage(v, crop.x*sx, crop.y*sy, crop.w*sx, crop.h*sy, 0, 0, 400, 100);
+        
+        const { data: { text, confidence } } = await worker.recognize(dC);
         isScanning = false;
-        let num = parseInt(text.replace(/\D/g, ""));
 
-        if(confidence > 65 && num >= 1 && num <= 25) {
-            votes[num] = (votes[num] || 0) + 1;
-            scanCount++;
-            if(scanCount >= 3) {
-                let winner = parseInt(Object.keys(votes).reduce((a, b) => votes[a] > votes[b] ? a : b));
-                if(winner !== lastSentId) {
-                    lastSentId = winner;
-                    bc.postMessage(teamDB[winner]);
-                    document.getElementById('status').innerText = "DETECTED: TEAM " + winner;
-                }
-                votes = {}; scanCount = 0;
+        let cleanText = text.toUpperCase().replace(/\s+/g, ""); 
+        // Logic fix: Extracting number directly
+        let match = cleanText.match(/(\d+)/);
+
+        if(confidence > 45 && match) {
+            let num = parseInt(match[0]);
+            if(num >= 1 && num <= 25 && num !== lastSentId) {
+                lastSentId = num;
+                pushToCloud(teamDB[num]);
+                document.getElementById('status').innerText = "SENT: TEAM " + num;
             }
         }
     }
 
     selC.onmousedown = (e) => { crop.x = e.offsetX; crop.y = e.offsetY; crop.drawing = true; };
-    selC.onmousemove = (e) => { 
-        if(!crop.drawing) return;
-        sCtx.clearRect(0,0,selC.width,selC.height);
-        sCtx.strokeStyle = "#0f0"; sCtx.lineWidth = 2;
-        sCtx.strokeRect(crop.x, crop.y, e.offsetX-crop.x, e.offsetY-crop.y);
-    };
+    selC.onmousemove = (e) => { if(crop.drawing) { sCtx.clearRect(0,0,selC.width,selC.height); sCtx.strokeStyle = "#0f0"; sCtx.lineWidth=2; sCtx.strokeRect(crop.x, crop.y, e.offsetX-crop.x, e.offsetY-crop.y); } };
     selC.onmouseup = (e) => { crop.w = Math.abs(e.offsetX-crop.x); crop.h = Math.abs(e.offsetY-crop.y); crop.drawing = false; };
 </script>
 </body>
