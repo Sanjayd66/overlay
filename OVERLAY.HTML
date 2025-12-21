@@ -2,37 +2,38 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>BGMI PRO - OCR V12 STABLE</title>
+    <title>BGMI AI ONLINE - V12 FIXED</title>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
         :root { --orange: #ff5a00; }
-        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #0a0a0a; color: white; display: flex; height: 100vh; overflow: hidden; }
-        #admin { width: 650px; background: #111; border-right: 2px solid var(--orange); padding: 15px; overflow-y: auto; }
-        .status { background: #000; padding: 12px; border: 1px solid #333; color: #0f0; text-align: center; margin-bottom: 10px; font-size: 18px; border-left: 5px solid #0f0; font-family: monospace; }
+        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #0a0a0a; color: white; display: flex; height: 100vh; }
+        #admin { width: 550px; background: #111; border-right: 2px solid var(--orange); padding: 15px; overflow-y: auto; }
+        .status { background: #000; padding: 10px; border: 1px solid #333; color: #0f0; text-align: center; margin-bottom: 10px; font-size: 18px; border-left: 5px solid #0f0; }
         .btn-group { display: flex; gap: 10px; margin-bottom: 10px; }
-        .btn { flex: 1; padding: 12px; font-weight: bold; cursor: pointer; border: none; border-radius: 4px; color: white; text-transform: uppercase; }
-        #import-area { width: 96%; height: 60px; background: #222; color: #fff; border: 1px solid #444; padding: 10px; font-size: 12px; margin-bottom: 5px; border-radius: 4px; resize: none; }
-        .preview-box { position: relative; width: 100%; background: #000; border: 1px solid #444; line-height: 0; margin-bottom: 10px; }
+        .btn { flex: 1; padding: 10px; font-weight: bold; cursor: pointer; border: none; border-radius: 4px; color: white; text-transform: uppercase; }
+        #import-area { width: 95%; height: 70px; background: #222; color: #fff; border: 1px solid #444; padding: 10px; margin-bottom: 10px; resize: none; }
+        .preview-box { position: relative; width: 100%; background: #000; border: 1px solid #444; margin-bottom: 10px; }
         #v { width: 100%; height: auto; }
         #sel-canvas { position: absolute; top:0; left:0; width:100%; height:100%; cursor: crosshair; }
-        #debug-canvas { width: 100%; height: 80px; background: #0000ff; border: 2px solid #00f; margin-bottom: 10px; }
-        .db-table { width: 100%; border-collapse: collapse; font-size: 10px; }
-        .db-table th { background: #222; padding: 8px; position: sticky; top:0; z-index: 10; color: var(--orange); }
-        .db-table input { background: #1a1a1a; color: #fff; border: 1px solid #333; width: 90%; padding: 4px; border-radius: 2px; }
+        #debug-canvas { width: 100%; height: 60px; background: #fff; border: 2px solid red; margin-bottom: 10px; }
+        .db-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+        .db-table th { color: var(--orange); padding: 8px; text-align: left; background: #222; position: sticky; top: 0; }
+        .db-table td { border-bottom: 1px solid #222; padding: 5px; }
+        .db-table input { background: #1a1a1a; color: #fff; border: 1px solid #333; width: 90%; padding: 4px; }
         .btn-show { background: #28a745; color: white; border: none; padding: 5px; cursor: pointer; width: 100%; font-weight: bold; }
     </style>
 </head>
 <body>
 
 <div id="admin">
-    <div id="status" class="status">OFFLINE</div>
+    <div id="status" class="status">ONLINE MODE</div>
     <div class="btn-group">
         <button class="btn" style="background:var(--orange)" onclick="startApp()">START CAPTURE</button>
-        <button class="btn" style="background:#0088ff" onclick="openOverlay()">OPEN VIEW PANEL</button>
+        <button class="btn" style="background:#0088ff" onclick="window.open('view.html','_blank')">OPEN VIEW</button>
     </div>
 
-    <textarea id="import-area" placeholder="1 | Team Name (Paste here)"></textarea>
-    <button class="btn" style="background:#444; width:100%; margin-bottom:15px; height: 30px; padding: 0;" onclick="importSlots()">IMPORT LIST</button>
+    <textarea id="import-area" placeholder="Slot List Paste: 1 | Team Name"></textarea>
+    <button class="btn" style="background:#444; width:100%; margin-bottom:15px; height:30px; padding:0;" onclick="importSlots()">UPDATE SLOT LIST</button>
 
     <div class="preview-box">
         <video id="v" autoplay muted></video>
@@ -41,31 +42,37 @@
     <canvas id="debug-canvas"></canvas>
 
     <table class="db-table">
-        <thead><tr><th>#</th><th>ACTION</th><th>TEAM NAME</th><th>LOGO LINK</th><th>BDR</th><th>THEME</th></tr></thead>
+        <thead><tr><th>#</th><th>ACT</th><th>NAME</th><th>LOGO</th><th>BDR</th><th>BG</th></tr></thead>
         <tbody id="dbBody"></tbody>
     </table>
 </div>
 
 <script>
+    // ONLINE FIREBASE URL [Aapki Database Link]
     const fbURL = "https://bgmi-overlay-default-rtdb.firebaseio.com/liveData.json"; 
+    
     const v = document.getElementById('v'), selC = document.getElementById('sel-canvas'), sCtx = selC.getContext('2d');
     const dC = document.getElementById('debug-canvas'), dCtx = dC.getContext('2d');
     
     let crop = { x: 0, y: 0, w: 0, h: 0, drawing: false };
-    let worker = null, lastSentId = null, isScanning = false;
-    let votes = {}, scanCount = 0;
+    let worker = null, lastSentId = null, votes = {}, scanCount = 0, isScanning = false;
     const correctionMap = { 'S': '5', 'B': '8', 'G': '6', 'I': '1', 'O': '0', 'Z': '2', 'T': '7' };
 
     const colorMap = { 1: "#E53935", 2: "#1E88E5", 3: "#FB8C00", 4: "#26C6DA", 5: "#8E24AA", 6: "#7CB342", 7: "#2E7D32", 8: "#D81B60", 9: "#FBC02D", 10: "#D81B60", 11: "#FBC02D", 12: "#26C6DA", 13: "#1E88E5", 14: "#FB8C00", 15: "#8E24AA", 16: "#7CB342", 17: "#26A69A", 18: "#FFB74D", 19: "#8BC34A", 20: "#1565C0", 21: "#6A1B9A", 22: "#00838F", 23: "#E53935", 24: "#1E88E5", 25: "#FB8C00" };
 
-    let teamDB = JSON.parse(localStorage.getItem('bgmi_v12_pro')) || {};
+    let teamDB = JSON.parse(localStorage.getItem('bgmi_v12_online')) || {};
 
     function renderTable() {
         const tbody = document.getElementById('dbBody');
         tbody.innerHTML = "";
         for (let i = 1; i <= 25; i++) {
-            if(!teamDB[i]) teamDB[i] = { name: `TEAM ${i}`, logo: ``, bdr: '#ffffff', sbg: colorMap[i] };
-            tbody.innerHTML += `<tr><td>${i}</td><td><button class="btn-show" onclick="pushData(${i})">SHOW</button></td><td><input type="text" id="name-${i}" value="${teamDB[i].name}" onchange="updateDB(${i},'name',this.value)"></td><td><input type="text" id="logo-${i}" value="${teamDB[i].logo}" onchange="updateDB(${i},'logo',this.value)"></td><td><input type="color" id="bdr-${i}" value="${teamDB[i].bdr}" onchange="updateDB(${i},'bdr',this.value)"></td><td><input type="color" id="sbg-${i}" value="${teamDB[i].sbg}" onchange="updateDB(${i},'sbg',this.value)"></td></tr>`;
+            if(!teamDB[i]) teamDB[i] = { name: `TEAM ${i}`, logo: `${i}`, bdr: '#ffffff', sbg: colorMap[i] };
+            tbody.innerHTML += `<tr><td>${i}</td>
+                <td><button class="btn-show" onclick="pushData(${i})">SHOW</button></td>
+                <td><input type="text" id="name-${i}" value="${teamDB[i].name}" onchange="updateDB(${i},'name',this.value)"></td>
+                <td><input type="text" id="logo-${i}" value="${teamDB[i].logo}" onchange="updateDB(${i},'logo',this.value)"></td>
+                <td><input type="color" id="bdr-${i}" value="${teamDB[i].bdr}" onchange="updateDB(${i},'bdr',this.value)"></td>
+                <td><input type="color" id="sbg-${i}" value="${teamDB[i].sbg}" onchange="updateDB(${i},'sbg',this.value)"></td></tr>`;
         }
     }
     renderTable();
@@ -75,44 +82,22 @@
             const m = line.match(/(\d+)\s*[|•-]\s*(.*)/);
             if(m) { teamDB[parseInt(m[1])].name = m[2].trim(); }
         });
-        localStorage.setItem('bgmi_v12_pro', JSON.stringify(teamDB));
+        localStorage.setItem('bgmi_v12_online', JSON.stringify(teamDB));
         renderTable();
     }
 
-    function updateDB(id, k, val) { teamDB[id][k] = val; localStorage.setItem('bgmi_v12_pro', JSON.stringify(teamDB)); }
+    function updateDB(id, k, val) { 
+        teamDB[id][k] = val; 
+        localStorage.setItem('bgmi_v12_online', JSON.stringify(teamDB)); 
+        if(lastSentId == id) pushData(id);
+    }
 
     async function pushData(id) {
         lastSentId = id;
-        await fetch(fbURL, { method: 'PUT', body: JSON.stringify(teamDB[id]) });
-        document.getElementById('status').innerText = "LOCKED: " + id;
-    }
-
-    function openOverlay() {
-        let win = window.open("", "Overlay", "width=1920,height=1080");
-        win.document.write(`
-            <html><head><link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
-            <style>
-                body { margin:0; background:#00ff00; overflow:hidden; font-family:'Bebas Neue'; display:flex; align-items:flex-end; height:100vh; padding: 0 0 100px 100px; }
-                #container { display:flex; align-items: flex-start; }
-                .logo-box { background: var(--sbg); width: 140px; height: 140px; border: 5px solid var(--bdr); display: flex; align-items: center; justify-content: center; z-index: 10; box-sizing: border-box; }
-                .logo-box img { width: 90%; height: 90%; object-fit: contain; }
-                .name-strip { background: var(--sbg); height: 56px; display: flex; align-items: center; padding: 0 50px 0 25px; color: white; font-size: 36px; clip-path: polygon(0 0, 95% 0, 100% 100%, 0 100%); margin-left: -2px; border-bottom: 5px solid var(--bdr); }
-            </style></head>
-            <body>
-                <div id="container"><div class="logo-box" id="l"></div><div class="name-strip" id="n"></div></div>
-                <script>
-                    setInterval(async () => {
-                        const r = await fetch('${fbURL}?v='+Date.now());
-                        const d = await r.json();
-                        if(!d) return;
-                        document.body.style.setProperty('--bdr', d.bdr);
-                        document.body.style.setProperty('--sbg', d.sbg);
-                        document.getElementById('n').innerText = d.name.toUpperCase();
-                        document.getElementById('l').innerHTML = d.logo.startsWith('http') ? '<img src="'+d.logo+'">' : '<span style="font-size:70px;color:white">'+d.logo+'</span>';
-                    }, 500);
-                <\/script>
-            </body></html>
-        `);
+        try {
+            await fetch(fbURL, { method: 'PUT', body: JSON.stringify(teamDB[id]) });
+            document.getElementById('status').innerText = "ONLINE: LOCKED " + id;
+        } catch(e) { document.getElementById('status').innerText = "SYNC ERROR"; }
     }
 
     async function startApp() {
@@ -123,7 +108,7 @@
     async function initOCR() {
         worker = await Tesseract.createWorker('eng');
         await worker.setParameters({ tessedit_char_whitelist: '0123456789SBGIOZT', tessedit_pageseg_mode: '7' });
-        document.getElementById('status').innerText = "OCR ACTIVE";
+        document.getElementById('status').innerText = "AI ONLINE READY";
         setInterval(scan, 100);
     }
 
@@ -132,9 +117,16 @@
         isScanning = true;
         const sx = v.videoWidth / selC.width, sy = v.videoHeight / selC.height;
         dC.width = 160; dC.height = 80;
-        dCtx.filter = "grayscale(1) contrast(15) brightness(1.2) invert(1)"; 
+        dCtx.filter = "grayscale(1) contrast(15) brightness(1.2)"; 
         dCtx.drawImage(v, crop.x*sx, crop.y*sy, crop.w*sx, crop.h*sy, 0, 0, 160, 80);
         
+        let imgData = dCtx.getImageData(0,0,160,80), d = imgData.data;
+        for(let i=0; i<d.length; i+=4) {
+            let avg = (d[i]+d[i+1]+d[i+2])/3;
+            d[i]=d[i+1]=d[i+2] = (avg > 185) ? 0 : 255;
+        }
+        dCtx.putImageData(imgData,0,0);
+
         const { data: { text, confidence } } = await worker.recognize(dC);
         isScanning = false;
 
