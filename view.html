@@ -2,32 +2,63 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>BGMI VIEW ONLINE</title>
+    <title>BGMI VIEW V15 - NO BORDER</title>
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
     <style>
-        body { margin:0; background:#00ff00; overflow:hidden; font-family:'Bebas Neue'; display:flex; align-items:flex-end; height:100vh; padding: 0 0 100px 100px; }
+        /* Green Screen Background for OBS */
+        body { 
+            margin:0; 
+            background:#00ff00; 
+            overflow:hidden; 
+            font-family:'Bebas Neue'; 
+            display:flex; 
+            align-items:flex-end; 
+            height:100vh; 
+            padding: 0 0 100px 100px; 
+        }
         
-        /* ALIGNMENT: Logo and Strip start together from top */
-        #container { display:flex; align-items: flex-start; }
+        /* Container aligned to Top */
+        #container { 
+            display:flex; 
+            align-items: flex-start; 
+        }
         
+        /* Logo Box - Border Removed */
         .logo-box { 
             background: var(--sbg); 
-            width: 140px; height: 140px; 
-            border: 5px solid var(--bdr); 
-            display: flex; align-items: center; justify-content: center; 
-            z-index: 10; box-sizing: border-box; 
+            width: 140px; 
+            height: 140px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            z-index: 10; 
+            box-sizing: border-box;
+            border: none; /* Border Hataya Gaya */
         }
-        .logo-box img { width: 90%; height: 90%; object-fit: contain; }
-        .logo-box span { color: white; font-size: 80px; }
+        
+        .logo-box img { 
+            width: 90%; 
+            height: 90%; 
+            object-fit: contain; 
+        }
+        
+        .logo-box span { 
+            color: white; 
+            font-size: 85px; 
+        }
 
+        /* Name Strip - Border Removed & 40% Height */
         .name-strip { 
             background: var(--sbg); 
-            height: 56px; /* Exactly 40% of logo height */
-            display: flex; align-items: center; 
-            padding: 0 60px 0 30px; color: white; font-size: 38px; 
+            height: 56px; /* 140px का 40% */
+            display: flex; 
+            align-items: center; 
+            padding: 0 60px 0 30px; 
+            color: white; 
+            font-size: 40px; 
             clip-path: polygon(0 0, 95% 0, 100% 100%, 0 100%); 
-            margin-left: -2px; 
-            border-bottom: 5px solid var(--bdr); 
+            margin-left: 0px; /* Logo se chipka hua */
+            border: none; /* Border Hataya Gaya */
         }
     </style>
 </head>
@@ -42,22 +73,30 @@
         
         async function sync() {
             try {
-                const response = await fetch(fbURL + "?nocache=" + Date.now());
-                const data = await response.json();
-                if(!data) return;
+                // Anti-cache fetch for instant updates
+                const r = await fetch(fbURL + "?v=" + Date.now());
+                const d = await r.json();
+                if(!d) return;
 
-                document.body.style.setProperty('--bdr', data.bdr);
-                document.body.style.setProperty('--sbg', data.sbg);
-                document.getElementById('n').innerText = data.name.toUpperCase();
+                // Set Colors from Firebase
+                document.body.style.setProperty('--sbg', d.sbg || '#ff5a00');
                 
+                // Update Name
+                document.getElementById('n').innerText = (d.name || "TEAM").toUpperCase();
+                
+                // Update Logo or Number
                 const l = document.getElementById('l');
-                if(data.logo && data.logo.startsWith('http')) {
-                    l.innerHTML = `<img src="${data.logo}">`;
+                if(d.logo && d.logo.startsWith('http')) {
+                    l.innerHTML = `<img src="${d.logo}">`;
                 } else {
-                    l.innerHTML = `<span>${data.logo}</span>`;
+                    l.innerHTML = `<span>${d.logo || ''}</span>`;
                 }
-            } catch(e) {}
+            } catch(e) {
+                console.log("Sync Error");
+            }
         }
+
+        // Fast Sync every 500ms
         setInterval(sync, 500);
     </script>
 </body>
