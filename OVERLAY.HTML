@@ -2,23 +2,20 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>BGMI AI ADMIN - 100% OCR + COLORS</title>
+    <title>BGMI AI ADMIN - 100% AUTO/MANUAL</title>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
-        :root { --orange: #ff5a00; --blue: #0088ff; }
-        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #0a0a0a; color: white; display: flex; height: 100vh; overflow: hidden; }
+        :root { --orange: #ff5a00; }
+        body { margin: 0; font-family: sans-serif; background: #0a0a0a; color: white; display: flex; height: 100vh; overflow: hidden; }
         #admin { width: 650px; background: #111; border-right: 2px solid var(--orange); padding: 15px; overflow-y: auto; }
         .btn-group { display: flex; gap: 10px; margin-bottom: 10px; }
         .btn { flex: 1; padding: 12px; font-weight: bold; cursor: pointer; border: none; border-radius: 4px; color: white; text-transform: uppercase; }
-        .btn-start { background: var(--orange); }
         .status { background: #000; padding: 12px; border: 1px solid #333; color: #0f0; text-align: center; margin-bottom: 10px; font-size: 18px; border-left: 5px solid #0f0; }
-        .preview-box { position: relative; width: 100%; background: #000; border: 1px solid #444; line-height: 0; margin-bottom: 10px; }
+        .preview-box { position: relative; width: 100%; background: #000; border: 1px solid #444; margin-bottom: 10px; line-height: 0; }
         #v { width: 100%; height: auto; }
         #sel-canvas { position: absolute; top:0; left:0; width:100%; height:100%; cursor: crosshair; }
-        #debug-canvas { width: 100%; height: 80px; background: #fff; border: 2px solid red; margin-bottom: 10px; }
+        #debug-canvas { width: 100%; height: 70px; background: #fff; border: 2px solid red; margin-bottom: 10px; }
         .db-table { width: 100%; border-collapse: collapse; font-size: 11px; }
-        .db-table th { background: #222; padding: 8px; position: sticky; top: 0; }
-        .db-table td { padding: 4px; border-bottom: 1px solid #222; }
         .db-table input { background: #1a1a1a; color: #fff; border: 1px solid #333; width: 90%; padding: 4px; }
         .btn-manual { background: #28a745; font-size: 10px; padding: 5px; width: 100%; color: white; border: none; cursor: pointer; }
     </style>
@@ -27,33 +24,22 @@
 
 <div id="admin">
     <div class="status" id="status">OCR READY - SELECT BOX</div>
-
     <div class="btn-group">
-        <button class="btn btn-start" onclick="startApp()">START CAPTURE</button>
-        <button class="btn" style="background:var(--blue)" onclick="window.open('view.html','_blank')">VIEW PANEL</button>
+        <button class="btn" style="background:var(--orange)" onclick="startApp()">START CAPTURE</button>
+        <button class="btn" style="background:#0088ff" onclick="window.open('view.html','_blank')">VIEW PANEL</button>
     </div>
 
-    <textarea id="import-area" style="width:96%; height:40px; background:#222; color:white; margin-bottom:10px;" placeholder="Paste Slot List Here..."></textarea>
-    <button class="btn" style="background:#444; width:100%; margin-bottom:15px; padding:8px;" onclick="importSlots()">IMPORT NAMES</button>
+    <textarea id="import-area" style="width:96%; height:40px; background:#222; color:white; margin-bottom:5px;" placeholder="Paste Slot List Here..."></textarea>
+    <button class="btn" style="background:#444; width:100%; margin-bottom:15px; padding:5px;" onclick="importSlots()">IMPORT NAMES</button>
 
     <div class="preview-box">
         <video id="v" autoplay muted></video>
         <canvas id="sel-canvas"></canvas>
     </div>
-    <div style="font-size:10px; color:grey;">OCR INPUT (100% SCALED):</div>
     <canvas id="debug-canvas"></canvas>
 
     <table class="db-table">
-        <thead>
-            <tr>
-                <th>#</th>
-                <th>MANUAL</th>
-                <th>TEAM NAME</th>
-                <th>LOGO #</th>
-                <th>BDR</th>
-                <th>BG</th>
-            </tr>
-        </thead>
+        <thead><tr><th>#</th><th>MANUAL</th><th>NAME</th><th>LOGO LINK</th><th>BDR</th><th>BG</th></tr></thead>
         <tbody id="dbBody"></tbody>
     </table>
 </div>
@@ -65,17 +51,16 @@
     
     let crop = { x: 0, y: 0, w: 0, h: 0, drawing: false };
     let worker = null, lastSentId = null, isScanning = false;
+    let teamDB = JSON.parse(localStorage.getItem('bgmi_v_final_manual')) || {};
 
-    let teamDB = JSON.parse(localStorage.getItem('bgmi_v_final_final')) || {};
-    
     function renderTable() {
         const tbody = document.getElementById('dbBody');
         tbody.innerHTML = "";
         for (let i = 1; i <= 25; i++) {
-            if(!teamDB[i]) teamDB[i] = { name: `TEAM ${i}`, logo: `${i}`, bdr: '#ffffff', sbg: '#ff5a00' };
+            if(!teamDB[i]) teamDB[i] = { name: `TEAM ${i}`, logo: `https://placehold.co/100`, bdr: '#ffffff', sbg: '#ff5a00' };
             tbody.innerHTML += `<tr>
                 <td>${i}</td>
-                <td><button class="btn-manual" onclick="sendToCloud(${i})">SHOW</button></td>
+                <td><button class="btn-manual" onclick="forceSend(${i})">SHOW</button></td>
                 <td><input type="text" id="name-${i}" value="${teamDB[i].name}" onchange="updateDB(${i},'name',this.value)"></td>
                 <td><input type="text" id="logo-${i}" value="${teamDB[i].logo}" onchange="updateDB(${i},'logo',this.value)"></td>
                 <td><input type="color" id="bdr-${i}" value="${teamDB[i].bdr}" onchange="updateDB(${i},'bdr',this.value)"></td>
@@ -87,15 +72,14 @@
 
     function updateDB(id, key, val) { 
         teamDB[id][key] = val; 
-        localStorage.setItem('bgmi_v_final_final', JSON.stringify(teamDB)); 
-        if(lastSentId == id) sendToCloud(id);
+        localStorage.setItem('bgmi_v_final_manual', JSON.stringify(teamDB)); 
+        if(lastSentId == id) forceSend(id);
     }
 
-    async function sendToCloud(id) {
+    async function forceSend(id) {
         lastSentId = id;
         try { await fetch(fbURL, { method: 'PUT', body: JSON.stringify(teamDB[id]) }); } catch (e) {}
         document.getElementById('status').innerText = "SENT: " + teamDB[id].name;
-        document.getElementById('status').style.color = "#0f0";
     }
 
     function importSlots() {
@@ -108,7 +92,7 @@
                 if(slot >= 1 && slot <= 25) { teamDB[slot].name = name; document.getElementById(`name-${slot}`).value = name; }
             }
         });
-        localStorage.setItem('bgmi_v_final_final', JSON.stringify(teamDB));
+        localStorage.setItem('bgmi_v_final_manual', JSON.stringify(teamDB));
     }
 
     async function startApp() {
@@ -118,10 +102,7 @@
 
     async function initOCR() {
         worker = await Tesseract.createWorker('eng');
-        await worker.setParameters({ 
-            tessedit_char_whitelist: '0123456789TEAMteam', 
-            tessedit_pageseg_mode: '7' 
-        });
+        await worker.setParameters({ tessedit_char_whitelist: '0123456789TEAMteam', tessedit_pageseg_mode: '7' });
         setInterval(scan, 400); 
     }
 
@@ -129,21 +110,15 @@
         if(!v.srcObject || crop.w < 5 || isScanning) return;
         isScanning = true;
         const sx = v.videoWidth / selC.width, sy = v.videoHeight / selC.height;
-        
-        // 100% OCR FIX: Upscaling image for clarity
         dC.width = 600; dC.height = 150;
         dCtx.filter = "grayscale(1) contrast(12) brightness(0.8) invert(1)"; 
         dCtx.drawImage(v, crop.x*sx, crop.y*sy, crop.w*sx, crop.h*sy, 0, 0, 600, 150);
-        
         const { data: { text, confidence } } = await worker.recognize(dC);
         isScanning = false;
-
         let match = text.toUpperCase().replace(/\s+/g, "").match(/(\d+)/);
-        if(confidence > 40 && match) {
+        if(confidence > 45 && match) {
             let num = parseInt(match[0]);
-            if(num >= 1 && num <= 25 && num !== lastSentId) {
-                sendToCloud(num);
-            }
+            if(num >= 1 && num <= 25 && num !== lastSentId) { forceSend(num); }
         }
     }
 
