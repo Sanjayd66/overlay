@@ -2,59 +2,33 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>BGMI VIEW - ORIGINAL SIZE</title>
+    <title>BGMI VIEW ONLINE</title>
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
     <style>
-        body { 
-            margin: 0; background: #00ff00; overflow: hidden; 
-            font-family: 'Bebas Neue', cursive; 
-            display: flex; align-items: flex-end; height: 100vh; 
-            padding: 0 0 50px 50px; 
-        }
-        
-        #container { display: flex; align-items: center; }
-
-        /* Exact Layout Size from Screenshot */
-        .logo-box { 
-            background: var(--sbg, #ff5a00); 
-            width: 140px; height: 140px; 
-            border: 4px solid #ffffff; 
-            display: flex; align-items: center; justify-content: center; 
-            z-index: 10;
-        }
-        .logo-box img { width: 85%; height: 85%; object-fit: contain; }
-
-        /* Strip Design from Screenshot */
-        .name-strip { 
-            background: var(--sbg, #000000); /* Default to black/dark if needed */
-            height: 65px; display: flex; align-items: center; 
-            padding: 0 45px 0 30px; 
-            color: white; font-size: 38px; 
-            clip-path: polygon(0 0, 95% 0, 100% 100%, 0 100%); 
-            margin-left: -2px;
-            border-bottom: 4px solid var(--bdr, #ffffff);
-        }
+        body { margin:0; background:#00ff00; overflow:hidden; font-family:'Bebas Neue'; display:flex; align-items:flex-end; height:100vh; padding: 0 0 100px 100px; }
+        #container { display:flex; align-items: flex-start; }
+        .logo-box { background: var(--sbg); width: 140px; height: 140px; border: 5px solid var(--bdr); display: flex; align-items: center; justify-content: center; z-index: 10; box-sizing: border-box; }
+        .logo-box img { width: 90%; height: 90%; object-fit: contain; }
+        .logo-box span { color: white; font-size: 70px; }
+        .name-strip { background: var(--sbg); height: 56px; display: flex; align-items: center; padding: 0 60px 0 30px; color: white; font-size: 40px; clip-path: polygon(0 0, 95% 0, 100% 100%, 0 100%); margin-left: -2px; border-bottom: 5px solid var(--bdr); }
     </style>
 </head>
 <body>
-    <div id="container">
-        <div class="logo-box"><img id="team-logo" src=""></div>
-        <div class="name-strip"><span id="team-name">WAITING...</span></div>
-    </div>
-<script>
-    const fbURL = "https://bgmi-overlay-default-rtdb.firebaseio.com/liveData.json"; 
-    async function sync() {
-        try {
-            const res = await fetch(fbURL + "?v=" + Date.now());
-            const data = await res.json();
-            if(!data) return;
-            document.getElementById('team-name').innerText = data.name;
-            if(data.logo) document.getElementById('team-logo').src = data.logo;
-            document.body.style.setProperty('--bdr', data.bdr || '#ffffff');
-            document.body.style.setProperty('--sbg', data.sbg || '#ff5a00');
-        } catch(e) {}
-    }
-    setInterval(sync, 500);
-</script>
+    <div id="container"><div class="logo-box" id="l"></div><div class="name-strip" id="n"></div></div>
+    <script>
+        const fbURL = "https://bgmi-overlay-default-rtdb.firebaseio.com/liveData.json";
+        setInterval(async () => {
+            try {
+                const r = await fetch(fbURL + "?v=" + Date.now());
+                const d = await r.json();
+                if(!d) return;
+                document.body.style.setProperty('--bdr', d.bdr);
+                document.body.style.setProperty('--sbg', d.sbg);
+                document.getElementById('n').innerText = d.name.toUpperCase();
+                const l = document.getElementById('l');
+                l.innerHTML = d.logo.startsWith('http') ? '<img src="'+d.logo+'">' : '<span>'+d.logo+'</span>';
+            } catch(e) {}
+        }, 500);
+    <\/script>
 </body>
 </html>
