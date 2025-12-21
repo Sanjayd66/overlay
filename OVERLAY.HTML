@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>BGMI AI ONLINE - V12 FIXED</title>
+    <title>BGMI AI ADMIN - ONLINE V12</title>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
         :root { --orange: #ff5a00; }
@@ -48,7 +48,7 @@
 </div>
 
 <script>
-    // ONLINE FIREBASE URL [Aapki Database Link]
+    // 1. AAPKI FIREBASE LINK (Isse mat badalna agar yahi hai)
     const fbURL = "https://bgmi-overlay-default-rtdb.firebaseio.com/liveData.json"; 
     
     const v = document.getElementById('v'), selC = document.getElementById('sel-canvas'), sCtx = selC.getContext('2d');
@@ -101,7 +101,8 @@
     }
 
     async function startApp() {
-        v.srcObject = await navigator.mediaDevices.getDisplayMedia({ video: true });
+        const stream = await navigator.mediaDevices.getDisplayMedia({ video: { width: 1920, height: 1080 } });
+        v.srcObject = stream;
         v.onloadedmetadata = () => { selC.width = v.clientWidth; selC.height = v.clientHeight; initOCR(); };
     }
 
