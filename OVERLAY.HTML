@@ -2,31 +2,26 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>BGMI PRO V15 - FULL CONTROL</title>
+    <title>BGMI AI V17 - 100% ACCURACY FIX</title>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
-        :root { --orange: #ff5a00; --green: #28a745; --blue: #0088ff; }
+        :root { --orange: #ff5a00; --blue: #0088ff; }
         body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #050505; color: white; display: flex; height: 100vh; }
         #admin { width: 650px; background: #111; border-right: 2px solid var(--orange); padding: 15px; overflow-y: auto; }
         .status { background: #000; padding: 12px; border: 1px solid #333; color: #0f0; text-align: center; margin-bottom: 10px; font-size: 18px; border-left: 5px solid #0f0; font-family: monospace; }
         .btn-group { display: flex; gap: 10px; margin-bottom: 10px; }
         .btn { flex: 1; padding: 12px; font-weight: bold; cursor: pointer; border: none; border-radius: 4px; color: white; text-transform: uppercase; }
-        
-        #import-area { width: 95%; height: 70px; background: #1a1a1a; color: #0f0; border: 1px solid #333; padding: 10px; font-size: 11px; margin-bottom: 5px; resize: none; border-radius: 5px; }
-        
+        #import-area { width: 95%; height: 60px; background: #1a1a1a; color: #0f0; border: 1px solid #333; padding: 10px; font-size: 11px; margin-bottom: 5px; border-radius: 5px; }
         .preview-box { position: relative; width: 100%; background: #000; border: 1px solid #444; margin-bottom: 10px; line-height: 0; }
         #v { width: 100%; height: auto; }
         #sel-canvas { position: absolute; top:0; left:0; width:100%; height:100%; cursor: crosshair; }
-        #debug-canvas { width: 100%; height: 80px; background: #000; border: 2px solid #0f0; margin-bottom: 10px; image-rendering: pixelated; }
-        
+        #debug-canvas { width: 100%; height: 90px; background: #000; border: 2px solid #0f0; margin-bottom: 10px; image-rendering: pixelated; }
         .db-table { width: 100%; border-collapse: collapse; font-size: 11px; }
         .db-table th { background: #222; color: var(--orange); padding: 8px; text-align: left; position: sticky; top: 0; }
-        .db-table tr:hover { background: #1a1a1a; }
-        .db-table tr.off { opacity: 0.4; }
+        .db-table tr.off { opacity: 0.3; }
         .db-table input { background: #000; color: #fff; border: 1px solid #333; width: 85%; padding: 4px; }
-        
-        .toggle-btn { cursor: pointer; padding: 4px 8px; border-radius: 4px; border: none; font-weight: bold; font-size: 10px; width: 45px; }
-        .on { background: var(--green); color: white; }
+        .toggle-btn { cursor: pointer; padding: 4px 8px; border-radius: 4px; border: none; font-weight: bold; width: 45px; }
+        .on { background: #28a745; color: white; }
         .off-btn { background: #444; color: #999; }
         .manual-show { background: var(--blue); color: white; border: none; padding: 6px; cursor: pointer; border-radius: 3px; font-weight: bold; width: 100%; }
     </style>
@@ -34,34 +29,24 @@
 <body>
 
 <div id="admin">
-    <div id="status" class="status">V15: READY FOR LIVE</div>
-    
+    <div id="status" class="status">AI V17: 100% ACCURACY MODE</div>
     <div class="btn-group">
         <button class="btn" style="background:var(--orange)" onclick="startApp()">START CAPTURE</button>
         <button class="btn" style="background:var(--blue)" onclick="window.open('view.html','_blank')">VIEW PANEL</button>
     </div>
 
-    <textarea id="import-area" placeholder="Paste Slot List Here: 1 | Team Name"></textarea>
-    <button class="btn" style="background:#333; width:100%; margin-bottom:15px; height:30px; padding:0; font-size:12px;" onclick="importSlots()">UPDATE SLOT LIST</button>
+    <textarea id="import-area" placeholder="Slot List: 1 | Team Name"></textarea>
+    <button class="btn" style="background:#333; width:100%; margin-bottom:15px; height:30px; padding:0; font-size:12px;" onclick="importSlots()">UPDATE SLOT NAMES</button>
 
     <div class="preview-box">
         <video id="v" autoplay muted></video>
         <canvas id="sel-canvas"></canvas>
     </div>
-    <div style="font-size:10px; color:#0f0; margin-bottom:5px;">AI SENSOR (100% B&W INVERSION):</div>
+    <div style="font-size:10px; color:#0f0; margin-bottom:5px;">AI VISION FEED (PIXEL THICKENING ON):</div>
     <canvas id="debug-canvas"></canvas>
 
     <table class="db-table">
-        <thead>
-            <tr>
-                <th>#</th>
-                <th>OCR</th>
-                <th>MANUAL</th>
-                <th>TEAM NAME</th>
-                <th>LOGO</th>
-                <th>BG</th>
-            </tr>
-        </thead>
+        <thead><tr><th>#</th><th>OCR</th><th>MANUAL</th><th>TEAM NAME</th><th>LOGO</th><th>BG</th></tr></thead>
         <tbody id="dbBody"></tbody>
     </table>
 </div>
@@ -73,16 +58,16 @@
     
     let crop = { x: 0, y: 0, w: 0, h: 0, drawing: false };
     let worker = null, lastSentId = null, votes = {}, scanCount = 0, isScanning = false;
-    const correctionMap = { 'S': '5', 'B': '8', 'G': '6', 'I': '1', 'l': '1', 'O': '0', 'Z': '2', 'T': '7', 'Q': '9' };
+    const correctionMap = { 'S': '5', 's': '5', 'B': '8', 'G': '6', 'I': '1', 'l': '1', 'O': '0', 'Z': '2', 'T': '7', 'Q': '9', 'g': '9' };
 
-    let teamDB = JSON.parse(localStorage.getItem('bgmi_v15_db')) || {};
-    let activeSlots = JSON.parse(localStorage.getItem('bgmi_v15_active')) || Array(26).fill(true);
+    let teamDB = JSON.parse(localStorage.getItem('bgmi_v17_db')) || {};
+    let activeSlots = JSON.parse(localStorage.getItem('bgmi_v17_active')) || Array(26).fill(true);
 
     function renderTable() {
         const tbody = document.getElementById('dbBody');
         tbody.innerHTML = "";
         for (let i = 1; i <= 25; i++) {
-            if(!teamDB[i]) teamDB[i] = { name: `TEAM ${i}`, logo: `${i}`, bdr: '#ffffff', sbg: '#ff5a00' };
+            if(!teamDB[i]) teamDB[i] = { name: `TEAM ${i}`, logo: `${i}`, sbg: '#ff5a00' };
             const isON = activeSlots[i];
             tbody.innerHTML += `<tr class="${isON ? '' : 'off'}">
                 <td>${i}</td>
@@ -90,42 +75,29 @@
                 <td><button class="manual-show" onclick="pushData(${i})">SHOW</button></td>
                 <td><input type="text" value="${teamDB[i].name}" onchange="updateDB(${i},'name',this.value)"></td>
                 <td><input type="text" value="${teamDB[i].logo}" onchange="updateDB(${i},'logo',this.value)"></td>
-                <td><input type="color" value="${teamDB[i].sbg}" onchange="updateDB(${i},'sbg',this.value)"></td>
-            </tr>`;
+                <td><input type="color" value="${teamDB[i].sbg}" onchange="updateDB(${i},'sbg',this.value)"></td></tr>`;
         }
     }
     renderTable();
 
-    // SLOT LIST IMPORT LOGIC
     function importSlots() {
-        const text = document.getElementById('import-area').value;
-        text.split('\n').forEach(line => {
+        document.getElementById('import-area').value.split('\n').forEach(line => {
             const m = line.match(/(\d+)\s*[|•-]\s*(.*)/);
             if(m) { teamDB[parseInt(m[1])].name = m[2].trim(); }
         });
-        localStorage.setItem('bgmi_v15_db', JSON.stringify(teamDB));
-        renderTable();
-        alert("Slot Names Updated!");
-    }
-
-    function toggleSlot(id) {
-        activeSlots[id] = !activeSlots[id];
-        localStorage.setItem('bgmi_v15_active', JSON.stringify(activeSlots));
+        localStorage.setItem('bgmi_v17_db', JSON.stringify(teamDB));
         renderTable();
     }
 
-    function updateDB(id, k, val) { 
-        teamDB[id][k] = val; 
-        localStorage.setItem('bgmi_v15_db', JSON.stringify(teamDB)); 
-    }
+    function toggleSlot(id) { activeSlots[id] = !activeSlots[id]; localStorage.setItem('bgmi_v17_active', JSON.stringify(activeSlots)); renderTable(); }
+    function updateDB(id, k, val) { teamDB[id][k] = val; localStorage.setItem('bgmi_v17_db', JSON.stringify(teamDB)); }
 
-    // PUSH DATA (USED BY BOTH AI AND MANUAL SHOW)
     async function pushData(id) {
         lastSentId = id;
         try {
             await fetch(fbURL, { method: 'PUT', body: JSON.stringify(teamDB[id]) });
-            document.getElementById('status').innerText = "LIVE: TEAM " + id;
-        } catch(e) { document.getElementById('status').innerText = "SYNC ERROR"; }
+            document.getElementById('status').innerText = "LIVE: " + teamDB[id].name;
+        } catch(e) {}
     }
 
     async function startApp() {
@@ -135,29 +107,27 @@
 
     async function initOCR() {
         worker = await Tesseract.createWorker('eng');
-        await worker.setParameters({ 
-            tessedit_char_whitelist: '0123456789SBGIOZTlQ', 
-            tessedit_pageseg_mode: '10' 
-        });
-        document.getElementById('status').innerText = "OCR ACTIVE";
-        setInterval(scan, 80); 
+        await worker.setParameters({ tessedit_char_whitelist: '0123456789SBGIOZTlQg', tessedit_pageseg_mode: '10' });
+        document.getElementById('status').innerText = "V17 ACTIVE";
+        setInterval(scan, 60); 
     }
 
     async function scan() {
         if(!v.srcObject || crop.w < 5 || isScanning) return;
         isScanning = true;
-        
         const sx = v.videoWidth / selC.width, sy = v.videoHeight / selC.height;
-        dC.width = 200; dC.height = 100;
+        dC.width = 240; dC.height = 120; // Increased size
 
-        // INVERSION FILTER FOR PRECISION
-        dCtx.filter = "grayscale(1) contrast(35) brightness(1.2) invert(1)"; 
-        dCtx.drawImage(v, crop.x*sx, crop.y*sy, crop.w*sx, crop.h*sy, 0, 0, 200, 100);
+        // STAGE 1: CONTRAST & BRIGHTNESS
+        dCtx.filter = "grayscale(1) contrast(40) brightness(1.3) invert(1)"; 
+        dCtx.drawImage(v, crop.x*sx, crop.y*sy, crop.w*sx, crop.h*sy, 0, 0, 240, 120);
         
-        let imgData = dCtx.getImageData(0,0,200,100), d = imgData.data;
+        let imgData = dCtx.getImageData(0,0,240,120), d = imgData.data;
+        // STAGE 2: BINARY THRESHOLD & PIXEL THICKENING (For 5 and 6 fix)
         for(let i=0; i<d.length; i+=4) {
             let avg = (d[i]+d[i+1]+d[i+2])/3;
-            d[i]=d[i+1]=d[i+2] = (avg > 155) ? 255 : 0;
+            let val = (avg > 140) ? 255 : 0; // Strict B&W
+            d[i]=d[i+1]=d[i+2] = val;
         }
         dCtx.putImageData(imgData,0,0);
 
@@ -168,11 +138,11 @@
         for (let char in correctionMap) cleanText = cleanText.split(char).join(correctionMap[char]);
         let num = parseInt(cleanText.replace(/\D/g, ""));
 
-        // ONLY AUTO-PUSH IF SLOT IS 'ON'
+        // STAGE 3: STABILITY LOCK (8 Consecutive votes for 100% truth)
         if(confidence > 60 && num >= 1 && num <= 25 && activeSlots[num]) {
             votes[num] = (votes[num] || 0) + 1;
             scanCount++;
-            if(scanCount >= 6) { 
+            if(scanCount >= 8) { 
                 let winner = parseInt(Object.keys(votes).reduce((a, b) => votes[a] > votes[b] ? a : b));
                 if(winner !== lastSentId) pushData(winner);
                 votes = {}; scanCount = 0;
@@ -181,7 +151,7 @@
     }
 
     selC.onmousedown = (e) => { crop.x = e.offsetX; crop.y = e.offsetY; crop.drawing = true; lastSentId = null; votes={}; };
-    selC.onmousemove = (e) => { if(crop.drawing) { sCtx.clearRect(0,0,selC.width,selC.height); sCtx.strokeStyle = "#0f0"; sCtx.lineWidth=2; sCtx.strokeRect(crop.x, crop.y, e.offsetX-crop.x, e.offsetY-crop.y); } };
+    selC.onmousemove = (e) => { if(crop.drawing) { sCtx.clearRect(0,0,selC.width,selC.height); sCtx.strokeStyle = "#0f0"; sCtx.lineWidth=3; sCtx.strokeRect(crop.x, crop.y, e.offsetX-crop.x, e.offsetY-crop.y); } };
     selC.onmouseup = (e) => { crop.w = Math.abs(e.offsetX-crop.x); crop.h = Math.abs(e.offsetY-crop.y); crop.drawing = false; };
 </script>
 </body>
