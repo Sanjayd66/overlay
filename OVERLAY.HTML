@@ -2,50 +2,50 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>BGMI AI ADMIN - FULL CONTROL</title>
+    <title>BGMI AI - MANUAL + AUTO CONTROL</title>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
-        :root { --orange: #ff5a00; --blue: #0088ff; }
+        :root { --orange: #ff5a00; --blue: #0088ff; --green: #28a745; }
         body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #0a0a0a; color: white; display: flex; height: 100vh; overflow: hidden; }
-        #admin { width: 550px; background: #111; border-right: 2px solid var(--orange); padding: 15px; overflow-y: auto; }
-        .btn-group { display: flex; gap: 10px; margin-bottom: 15px; }
-        .btn { flex: 1; padding: 12px; font-weight: bold; cursor: pointer; border: none; border-radius: 4px; color: white; text-transform: uppercase; font-size: 14px; }
+        #admin { width: 600px; background: #111; border-right: 2px solid var(--orange); padding: 15px; overflow-y: auto; }
+        .btn-group { display: flex; gap: 10px; margin-bottom: 10px; }
+        .btn { flex: 1; padding: 12px; font-weight: bold; cursor: pointer; border: none; border-radius: 4px; color: white; text-transform: uppercase; font-size: 13px; }
         .btn-start { background: var(--orange); }
         .btn-view { background: var(--blue); }
-        .status { background: #000; padding: 12px; border: 1px solid #333; color: #0f0; font-family: monospace; text-align: center; margin-bottom: 10px; font-size: 18px; border-left: 5px solid #0f0; }
-        #import-area { width: 96%; height: 60px; background: #222; color: #ccc; border: 1px solid #444; padding: 8px; font-size: 11px; margin-bottom: 10px; border-radius: 4px; }
+        .status { background: #000; padding: 12px; border: 1px solid #333; color: #0f0; text-align: center; margin-bottom: 10px; font-size: 18px; border-left: 5px solid #0f0; }
         .preview-box { position: relative; width: 100%; background: #000; border: 1px solid #444; line-height: 0; margin-bottom: 10px; }
         #v { width: 100%; height: auto; }
         #sel-canvas { position: absolute; top:0; left:0; width:100%; height:100%; cursor: crosshair; }
-        #debug-canvas { width: 100%; height: 80px; background: #fff; margin-bottom: 10px; border: 2px solid red; }
+        #debug-canvas { width: 100%; height: 70px; background: #fff; border: 2px solid red; margin-bottom: 10px; }
         .db-table { width: 100%; border-collapse: collapse; font-size: 11px; }
-        .db-table th { background: #222; padding: 5px; text-align: left; }
-        .db-table input { background: #1a1a1a; color: #fff; border: 1px solid #333; width: 92%; padding: 4px; }
+        .db-table th { background: #222; padding: 8px; text-align: left; }
+        .db-table td { padding: 5px; border-bottom: 1px solid #222; }
+        .db-table input { background: #1a1a1a; color: #fff; border: 1px solid #333; width: 85%; padding: 4px; border-radius: 3px; }
+        .btn-show { background: var(--green); padding: 5px 10px; font-size: 10px; width: 100%; }
+        .active-row { background: #222; border-left: 3px solid #0f0; }
     </style>
 </head>
 <body>
 
 <div id="admin">
-    <div class="status" id="status">AI READY - DRAW BOX</div>
+    <div class="status" id="status">MODE: IDLE (DRAW BOX)</div>
 
     <div class="btn-group">
-        <button class="btn btn-start" onclick="startApp()">1. START CAPTURE</button>
+        <button class="btn btn-start" onclick="startApp()">1. START AI SCAN</button>
         <button class="btn btn-view" onclick="window.open('view.html','_blank')">2. VIEW OUTPUT</button>
     </div>
 
-    <textarea id="import-area" placeholder="Paste Slot List Here..."></textarea>
-    <button class="btn" style="background:#28a745; width:100%; margin-bottom:15px;" onclick="importSlots()">IMPORT SLOT NAMES</button>
+    <textarea id="import-area" style="width:96%; height:50px; background:#222; color:white; margin-bottom:10px;" placeholder="Paste Slot List Here..."></textarea>
+    <button class="btn" style="background:#555; width:100%; margin-bottom:15px;" onclick="importSlots()">IMPORT SLOT NAMES</button>
 
     <div class="preview-box">
         <video id="v" autoplay muted></video>
         <canvas id="sel-canvas"></canvas>
     </div>
-    
-    <div style="font-size:11px; color:grey; margin-bottom:5px;">OCR PREVIEW (10X CONTRAST):</div>
     <canvas id="debug-canvas"></canvas>
 
     <table class="db-table">
-        <thead><tr><th>#</th><th>NAME</th><th>LOGO</th><th>BDR</th><th>BG</th></tr></thead>
+        <thead><tr><th>#</th><th>MANUAL</th><th>NAME</th><th>LOGO</th><th>BDR</th></tr></thead>
         <tbody id="dbBody"></tbody>
     </table>
 </div>
@@ -58,15 +58,32 @@
     let crop = { x: 0, y: 0, w: 0, h: 0, drawing: false };
     let worker = null, lastSentId = null, isScanning = false;
 
-    let teamDB = JSON.parse(localStorage.getItem('bgmi_v_final_final')) || {};
-    const tbody = document.getElementById('dbBody');
-    for (let i = 1; i <= 25; i++) {
-        if(!teamDB[i]) teamDB[i] = { name: `TEAM ${i}`, logo: `${i}`, bdr: '#ffffff', sbg: '#ff5a00' };
-        tbody.innerHTML += `<tr><td>${i}</td>
-            <td><input type="text" id="name-${i}" value="${teamDB[i].name}" onchange="updateDB(${i},'name',this.value)"></td>
-            <td><input type="text" id="logo-${i}" value="${teamDB[i].logo}" onchange="updateDB(${i},'logo',this.value)"></td>
-            <td><input type="color" id="bdr-${i}" value="${teamDB[i].bdr}" onchange="updateDB(${i},'bdr',this.value)"></td>
-            <td><input type="color" id="sbg-${i}" value="${teamDB[i].sbg}" onchange="updateDB(${i},'sbg',this.value)"></td></tr>`;
+    let teamDB = JSON.parse(localStorage.getItem('bgmi_v_manual')) || {};
+    
+    function renderTable() {
+        const tbody = document.getElementById('dbBody');
+        tbody.innerHTML = "";
+        for (let i = 1; i <= 25; i++) {
+            if(!teamDB[i]) teamDB[i] = { name: `TEAM ${i}`, logo: `${i}`, bdr: '#ffffff', sbg: '#ff5a00' };
+            tbody.innerHTML += `<tr id="row-${i}">
+                <td style="font-weight:bold">${i}</td>
+                <td><button class="btn btn-show" onclick="manualShow(${i})">SHOW</button></td>
+                <td><input type="text" id="name-${i}" value="${teamDB[i].name}" onchange="updateDB(${i},'name',this.value)"></td>
+                <td><input type="text" id="logo-${i}" value="${teamDB[i].logo}" onchange="updateDB(${i},'logo',this.value)"></td>
+                <td><input type="color" id="bdr-${i}" value="${teamDB[i].bdr}" onchange="updateDB(${i},'bdr',this.value)"></td>
+            </tr>`;
+        }
+    }
+    renderTable();
+
+    // MANUAL OVERRIDE FUNCTION
+    function manualShow(id) {
+        lastSentId = id;
+        pushToCloud(teamDB[id]);
+        document.querySelectorAll('tr').forEach(r => r.classList.remove('active-row'));
+        document.getElementById(`row-${id}`).classList.add('active-row');
+        document.getElementById('status').innerText = "MANUAL: " + teamDB[id].name;
+        document.getElementById('status').style.color = "#0088ff";
     }
 
     function importSlots() {
@@ -79,13 +96,12 @@
                 if(slot >= 1 && slot <= 25) { teamDB[slot].name = name; document.getElementById(`name-${slot}`).value = name; }
             }
         });
-        localStorage.setItem('bgmi_v_final_final', JSON.stringify(teamDB));
-        alert("Slot list updated!");
+        localStorage.setItem('bgmi_v_manual', JSON.stringify(teamDB));
     }
 
     function updateDB(id, key, val) { 
         teamDB[id][key] = val; 
-        localStorage.setItem('bgmi_v_final_final', JSON.stringify(teamDB)); 
+        localStorage.setItem('bgmi_v_manual', JSON.stringify(teamDB)); 
         if(lastSentId == id) pushToCloud(teamDB[id]);
     }
 
@@ -101,8 +117,8 @@
     async function initOCR() {
         worker = await Tesseract.createWorker('eng');
         await worker.setParameters({ tessedit_char_whitelist: '0123456789TEAMteam', tessedit_pageseg_mode: '7' });
-        document.getElementById('status').innerText = "OCR ACTIVE";
-        setInterval(scan, 250); 
+        document.getElementById('status').innerText = "AUTO SCAN ACTIVE";
+        setInterval(scan, 400); // 400ms is stable for anti-flicker
     }
 
     async function scan() {
@@ -117,12 +133,10 @@
         isScanning = false;
 
         let match = text.toUpperCase().replace(/\s+/g, "").match(/(\d+)/);
-        if(confidence > 30 && match) {
+        if(confidence > 45 && match) {
             let num = parseInt(match[0]);
             if(num >= 1 && num <= 25 && num !== lastSentId) {
-                lastSentId = num;
-                pushToCloud(teamDB[num]);
-                document.getElementById('status').innerText = "LIVE: " + teamDB[num].name;
+                manualShow(num); // Use same logic for smooth update
             }
         }
     }
