@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>BGMI AI ADMIN - PRO VERSION</title>
+    <title>BGMI AI ADMIN - INSTANT SYNC</title>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
     <style>
@@ -23,16 +23,13 @@
         .db-table th { background: #222; padding: 5px; text-align: left; }
         .db-table td { padding: 4px; border-bottom: 1px solid #222; }
         .db-table input { background: #1a1a1a; color: #fff; border: 1px solid #333; width: 95%; padding: 3px; }
-        .db-table input[type="color"] { padding: 0; height: 25px; cursor: pointer; }
     </style>
 </head>
 <body>
 
 <div id="admin">
-    <div class="status" id="status">AI READY</div>
-    
-    <div style="font-size: 12px; margin-bottom: 5px; color: var(--orange);">PASTE SLOT LIST HERE:</div>
-    <textarea id="import-area" placeholder="05 | TEAM NAME..."></textarea>
+    <div class="status" id="status">AI READY - DRAW BOX TO START</div>
+    <textarea id="import-area" placeholder="Paste Slot List Here..."></textarea>
     <button class="btn btn-import" onclick="importSlots()">Import Names</button>
 
     <div class="btn-group" style="margin-top:15px;">
@@ -44,19 +41,10 @@
         <video id="v" autoplay muted></video>
         <canvas id="sel-canvas"></canvas>
     </div>
-    <div style="font-size:11px;color:grey">AI PREVIEW (HIGH CONTRAST):</div>
     <canvas id="debug-canvas"></canvas>
 
     <table class="db-table">
-        <thead>
-            <tr>
-                <th>#</th>
-                <th>NAME</th>
-                <th>LOGO</th>
-                <th>BDR</th>
-                <th>BG</th>
-            </tr>
-        </thead>
+        <thead><tr><th>#</th><th>NAME</th><th>LOGO</th><th>BDR</th><th>BG</th></tr></thead>
         <tbody id="dbBody"></tbody>
     </table>
 </div>
@@ -68,11 +56,8 @@
     
     let crop = { x: 0, y: 0, w: 0, h: 0, drawing: false };
     let worker = null, lastSentId = null, isScanning = false;
-    let voteList = []; 
-    const voteLimit = 3; 
 
-    // Database load
-    let teamDB = JSON.parse(localStorage.getItem('bgmi_db_v_pro')) || {};
+    let teamDB = JSON.parse(localStorage.getItem('bgmi_db_v_instant')) || {};
 
     function renderTable() {
         const tbody = document.getElementById('dbBody');
@@ -92,25 +77,20 @@
 
     function importSlots() {
         const text = document.getElementById('import-area').value;
-        const lines = text.split('\n');
-        lines.forEach(line => {
+        text.split('\n').forEach(line => {
             const match = line.match(/(\d+)\s*[|•-]\s*(.*)/);
             if(match) {
                 const slot = parseInt(match[1]);
                 const name = match[2].trim();
-                if(slot >= 1 && slot <= 25) {
-                    teamDB[slot].name = name;
-                    document.getElementById(`name-${slot}`).value = name;
-                }
+                if(slot >= 1 && slot <= 25) { teamDB[slot].name = name; document.getElementById(`name-${slot}`).value = name; }
             }
         });
-        localStorage.setItem('bgmi_db_v_pro', JSON.stringify(teamDB));
-        alert("Names Updated!");
+        localStorage.setItem('bgmi_db_v_instant', JSON.stringify(teamDB));
     }
 
     function updateDB(id, key, val) { 
         teamDB[id][key] = val; 
-        localStorage.setItem('bgmi_db_v_pro', JSON.stringify(teamDB)); 
+        localStorage.setItem('bgmi_db_v_instant', JSON.stringify(teamDB)); 
         if(lastSentId == id) pushToCloud(teamDB[id]);
     }
 
@@ -126,12 +106,9 @@
 
     async function initOCR() {
         worker = await Tesseract.createWorker('eng');
-        await worker.setParameters({ 
-            tessedit_char_whitelist: '0123456789TEAMteam',
-            tessedit_pageseg_mode: '7'
-        });
-        document.getElementById('status').innerText = "AI SCANNING...";
-        setInterval(scan, 250); 
+        await worker.setParameters({ tessedit_char_whitelist: '0123456789TEAMteam', tessedit_pageseg_mode: '7' });
+        document.getElementById('status').innerText = "AI ACTIVE - SCANNING";
+        setInterval(scan, 200); 
     }
 
     async function scan() {
@@ -139,33 +116,28 @@
         isScanning = true;
         const sx = v.videoWidth / selC.width, sy = v.videoHeight / selC.height;
         dC.width = 400; dC.height = 100;
-        // Invert + High Contrast for 100% OCR
-        dCtx.filter = "grayscale(1) contrast(8) brightness(0.9) invert(1)"; 
+        // HIGH CONTRAST BUT NO INVERT (To avoid glitches)
+        dCtx.filter = "grayscale(1) contrast(6) brightness(1.2)"; 
         dCtx.drawImage(v, crop.x*sx, crop.y*sy, crop.w*sx, crop.h*sy, 0, 0, 400, 100);
         
         const { data: { text, confidence } } = await worker.recognize(dC);
         isScanning = false;
 
-        let cleanText = text.toUpperCase().replace(/\s+/g, ""); 
-        let match = cleanText.match(/(\d+)/);
+        let match = text.replace(/\s+/g, "").match(/(\d+)/);
 
-        if(confidence > 45 && match) {
+        // INSTANT UPDATE LOGIC: Agar confidence sahi hai toh turant bhej do
+        if(confidence > 50 && match) {
             let num = parseInt(match[0]);
-            if(num >= 1 && num <= 25) {
-                voteList.push(num);
-                if(voteList.length >= voteLimit) {
-                    const stableId = voteList.reduce((a, b, i, arr) => (arr.filter(v => v === a).length >= arr.filter(v => v === b).length ? a : b));
-                    if(stableId !== lastSentId) {
-                        lastSentId = stableId;
-                        pushToCloud(teamDB[stableId]);
-                        document.getElementById('status').innerText = "LOCKED: " + teamDB[stableId].name;
-                    }
-                    voteList = [];
-                }
+            if(num >= 1 && num <= 25 && num !== lastSentId) {
+                lastSentId = num;
+                pushToCloud(teamDB[num]);
+                document.getElementById('status').innerText = "SENT: " + teamDB[num].name;
+                document.getElementById('status').style.color = "#0f0";
             }
         }
     }
-    selC.onmousedown = (e) => { crop.x = e.offsetX; crop.y = e.offsetY; crop.drawing = true; voteList = []; };
+
+    selC.onmousedown = (e) => { crop.x = e.offsetX; crop.y = e.offsetY; crop.drawing = true; lastSentId = null; };
     selC.onmousemove = (e) => { if(crop.drawing) { sCtx.clearRect(0,0,selC.width,selC.height); sCtx.strokeStyle = "#0f0"; sCtx.lineWidth=2; sCtx.strokeRect(crop.x, crop.y, e.offsetX-crop.x, e.offsetY-crop.y); } };
     selC.onmouseup = (e) => { crop.w = Math.abs(e.offsetX-crop.x); crop.h = Math.abs(e.offsetY-crop.y); crop.drawing = false; };
 </script>
