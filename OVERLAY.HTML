@@ -4,41 +4,29 @@
     <meta charset="UTF-8">
     <title>BGMI AI ADMIN - INSTANT FIX</title>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
     <style>
         :root { --orange: #ff5a00; }
-        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #0a0a0a; color: white; display: flex; height: 100vh; overflow: hidden; }
+        body { margin: 0; font-family: sans-serif; background: #0a0a0a; color: white; display: flex; height: 100vh; }
         #admin { width: 550px; background: #111; border-right: 2px solid var(--orange); padding: 15px; overflow-y: auto; }
-        .btn-group { display: flex; gap: 8px; margin-bottom: 15px; }
-        .btn { flex: 1; padding: 10px; font-weight: bold; cursor: pointer; border: none; border-radius: 4px; color: white; text-transform: uppercase; }
-        .btn-start { background: var(--orange); }
-        .status { background: #000; padding: 10px; border: 1px solid #333; color: #0f0; font-family: monospace; text-align: center; margin-bottom: 10px; font-size: 18px; border-left: 5px solid #0f0; }
-        #import-area { width: 95%; height: 70px; background: #222; color: #ccc; border: 1px solid #444; padding: 8px; font-size: 11px; margin-bottom: 10px; }
-        .preview-box { position: relative; width: 100%; background: #000; border: 1px solid #444; line-height: 0; margin-bottom: 15px; }
+        .status { background: #000; padding: 10px; border: 1px solid #333; color: #0f0; text-align: center; margin-bottom: 10px; font-size: 18px; }
+        .preview-box { position: relative; width: 100%; background: #000; margin-bottom: 15px; }
         #v { width: 100%; height: auto; }
         #sel-canvas { position: absolute; top:0; left:0; width:100%; height:100%; cursor: crosshair; }
-        #debug-canvas { width: 100%; height: 80px; background: #fff; margin-bottom: 10px; border: 2px solid red; }
-        .db-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+        #debug-canvas { width: 100%; height: 80px; background: #fff; border: 2px solid red; }
+        .db-table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top:10px; }
         .db-table input { background: #1a1a1a; color: #fff; border: 1px solid #333; width: 95%; padding: 3px; }
     </style>
 </head>
 <body>
 
 <div id="admin">
-    <div class="status" id="status">READY - DRAW BOX</div>
-    <textarea id="import-area" placeholder="Paste Slot List Here..."></textarea>
-    <button class="btn" style="background:#28a745; width:100%;" onclick="importSlots()">Import Names</button>
-
-    <div class="btn-group" style="margin-top:15px;">
-        <button class="btn btn-start" onclick="startApp()">1. Start Capture</button>
-        <button class="btn" style="background:#0088ff" onclick="window.open('view.html','_blank')">2. View Output</button>
-    </div>
-
+    <div class="status" id="status">READY - SELECT TEAM BOX</div>
+    <button onclick="startApp()" style="width:100%; padding:10px; background:var(--orange); color:white; border:none; cursor:pointer; font-weight:bold;">1. START SCREEN CAPTURE</button>
+    
     <div class="preview-box">
         <video id="v" autoplay muted></video>
         <canvas id="sel-canvas"></canvas>
     </div>
-    <div style="font-size:11px; color:grey;">AI SCAN (LIVE PREVIEW):</div>
     <canvas id="debug-canvas"></canvas>
 
     <table class="db-table">
@@ -48,7 +36,6 @@
 </div>
 
 <script>
-    // REPLACING WITH YOUR DATABASE URL
     const fbURL = "https://bgmi-overlay-default-rtdb.firebaseio.com/liveData.json"; 
     const v = document.getElementById('v'), selC = document.getElementById('sel-canvas'), sCtx = selC.getContext('2d');
     const dC = document.getElementById('debug-canvas'), dCtx = dC.getContext('2d');
@@ -56,35 +43,16 @@
     let crop = { x: 0, y: 0, w: 0, h: 0, drawing: false };
     let worker = null, lastSentId = null, isScanning = false;
 
+    // Load DB
     let teamDB = JSON.parse(localStorage.getItem('bgmi_v_final_final')) || {};
-
-    function renderTable() {
-        const tbody = document.getElementById('dbBody');
-        tbody.innerHTML = "";
-        for (let i = 1; i <= 25; i++) {
-            if(!teamDB[i]) teamDB[i] = { name: `TEAM ${i}`, logo: `${i}`, bdr: '#ffffff', sbg: '#ff5a00' };
-            tbody.innerHTML += `<tr>
-                <td>${i}</td>
-                <td><input type="text" id="name-${i}" value="${teamDB[i].name}" onchange="updateDB(${i},'name',this.value)"></td>
-                <td><input type="text" id="logo-${i}" value="${teamDB[i].logo}" onchange="updateDB(${i},'logo',this.value)"></td>
-                <td><input type="color" id="bdr-${i}" value="${teamDB[i].bdr}" onchange="updateDB(${i},'bdr',this.value)"></td>
-                <td><input type="color" id="sbg-${i}" value="${teamDB[i].sbg}" onchange="updateDB(${i},'sbg',this.value)"></td>
-            </tr>`;
-        }
-    }
-    renderTable();
-
-    function importSlots() {
-        const text = document.getElementById('import-area').value;
-        text.split('\n').forEach(line => {
-            const match = line.match(/(\d+)\s*[|•-]\s*(.*)/);
-            if(match) {
-                const slot = parseInt(match[1]);
-                const name = match[2].trim();
-                if(slot >= 1 && slot <= 25) { teamDB[slot].name = name; document.getElementById(`name-${slot}`).value = name; }
-            }
-        });
-        localStorage.setItem('bgmi_v_final_final', JSON.stringify(teamDB));
+    const tbody = document.getElementById('dbBody');
+    for (let i = 1; i <= 25; i++) {
+        if(!teamDB[i]) teamDB[i] = { name: `TEAM ${i}`, logo: `${i}`, bdr: '#ffffff', sbg: '#ff5a00' };
+        tbody.innerHTML += `<tr><td>${i}</td>
+            <td><input type="text" id="name-${i}" value="${teamDB[i].name}" onchange="updateDB(${i},'name',this.value)"></td>
+            <td><input type="text" id="logo-${i}" value="${teamDB[i].logo}" onchange="updateDB(${i},'logo',this.value)"></td>
+            <td><input type="color" id="bdr-${i}" value="${teamDB[i].bdr}" onchange="updateDB(${i},'bdr',this.value)"></td>
+            <td><input type="color" id="sbg-${i}" value="${teamDB[i].sbg}" onchange="updateDB(${i},'sbg',this.value)"></td></tr>`;
     }
 
     function updateDB(id, key, val) { 
@@ -98,18 +66,14 @@
     }
 
     async function startApp() {
-        const stream = await navigator.mediaDevices.getDisplayMedia({ video: { width: 1920, height: 1080 } });
-        v.srcObject = stream;
+        v.srcObject = await navigator.mediaDevices.getDisplayMedia({ video: true });
         v.onloadedmetadata = () => { selC.width = v.clientWidth; selC.height = v.clientHeight; initOCR(); };
     }
 
     async function initOCR() {
         worker = await Tesseract.createWorker('eng');
-        await worker.setParameters({ 
-            tessedit_char_whitelist: '0123456789TEAMteam', 
-            tessedit_pageseg_mode: '7'
-        });
-        document.getElementById('status').innerText = "OCR STARTED";
+        await worker.setParameters({ tessedit_char_whitelist: '0123456789TEAMteam', tessedit_pageseg_mode: '7' });
+        document.getElementById('status').innerText = "AI SCANNING...";
         setInterval(scan, 300); 
     }
 
@@ -118,24 +82,20 @@
         isScanning = true;
         const sx = v.videoWidth / selC.width, sy = v.videoHeight / selC.height;
         dC.width = 400; dC.height = 100;
-        
-        // HIGHEST CONTRAST FOR PERFECT READ
+        // HIGH CONTRAST + INVERT
         dCtx.filter = "grayscale(1) contrast(10) brightness(0.8) invert(1)"; 
         dCtx.drawImage(v, crop.x*sx, crop.y*sy, crop.w*sx, crop.h*sy, 0, 0, 400, 100);
         
         const { data: { text, confidence } } = await worker.recognize(dC);
         isScanning = false;
 
-        let cleanText = text.toUpperCase().replace(/\s+/g, ""); 
-        let match = cleanText.match(/(\d+)/);
-
+        let match = text.toUpperCase().replace(/\s+/g, "").match(/(\d+)/);
         if(confidence > 35 && match) {
             let num = parseInt(match[0]);
             if(num >= 1 && num <= 25 && num !== lastSentId) {
                 lastSentId = num;
                 pushToCloud(teamDB[num]);
-                document.getElementById('status').innerText = "FORCED UPDATE: TEAM " + num;
-                document.getElementById('status').style.color = "#0f0";
+                document.getElementById('status').innerText = "LIVE: " + teamDB[num].name;
             }
         }
     }
