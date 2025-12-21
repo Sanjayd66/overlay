@@ -2,10 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>BGMI VIEW V15 - NO BORDER</title>
+    <title>BGMI VIEW V16 - FULL LOGO</title>
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
     <style>
-        /* Green Screen Background for OBS */
+        /* Green Screen Background */
         body { 
             margin:0; 
             background:#00ff00; 
@@ -17,13 +17,13 @@
             padding: 0 0 100px 100px; 
         }
         
-        /* Container aligned to Top */
+        /* Container */
         #container { 
             display:flex; 
             align-items: flex-start; 
         }
         
-        /* Logo Box - Border Removed */
+        /* Full Box Logo - 2px Padding Only */
         .logo-box { 
             background: var(--sbg); 
             width: 140px; 
@@ -33,32 +33,35 @@
             justify-content: center; 
             z-index: 10; 
             box-sizing: border-box;
-            border: none; /* Border Hataya Gaya */
+            border: none;
+            overflow: hidden; /* Bahar na nikle logo */
+            padding: 2px; /* Sirf 2px ka gap charo taraf */
         }
         
         .logo-box img { 
-            width: 90%; 
-            height: 90%; 
-            object-fit: contain; 
+            width: 100%; 
+            height: 100%; 
+            object-fit: contain; /* Pure box mein fit hoga bina kharab hue */
         }
         
         .logo-box span { 
             color: white; 
-            font-size: 85px; 
+            font-size: 90px; /* Number bhi bada dikhega */
+            line-height: 1;
         }
 
-        /* Name Strip - Border Removed & 40% Height */
+        /* Name Strip (40% height of Logo) */
         .name-strip { 
             background: var(--sbg); 
-            height: 56px; /* 140px का 40% */
+            height: 56px; 
             display: flex; 
             align-items: center; 
             padding: 0 60px 0 30px; 
             color: white; 
             font-size: 40px; 
             clip-path: polygon(0 0, 95% 0, 100% 100%, 0 100%); 
-            margin-left: 0px; /* Logo se chipka hua */
-            border: none; /* Border Hataya Gaya */
+            margin-left: 0px; 
+            border: none;
         }
     </style>
 </head>
@@ -73,30 +76,21 @@
         
         async function sync() {
             try {
-                // Anti-cache fetch for instant updates
                 const r = await fetch(fbURL + "?v=" + Date.now());
                 const d = await r.json();
                 if(!d) return;
 
-                // Set Colors from Firebase
                 document.body.style.setProperty('--sbg', d.sbg || '#ff5a00');
-                
-                // Update Name
                 document.getElementById('n').innerText = (d.name || "TEAM").toUpperCase();
                 
-                // Update Logo or Number
                 const l = document.getElementById('l');
                 if(d.logo && d.logo.startsWith('http')) {
                     l.innerHTML = `<img src="${d.logo}">`;
                 } else {
                     l.innerHTML = `<span>${d.logo || ''}</span>`;
                 }
-            } catch(e) {
-                console.log("Sync Error");
-            }
+            } catch(e) { console.log("Sync Error"); }
         }
-
-        // Fast Sync every 500ms
         setInterval(sync, 500);
     </script>
 </body>
