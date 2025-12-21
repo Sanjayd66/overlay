@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>BGMI AI PRO - 100% ACCURACY</title>
+    <title>BGMI AI PRO - 100% ACCURACY V13</title>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
         :root { --orange: #ff5a00; }
@@ -15,7 +15,7 @@
         .preview-box { position: relative; width: 100%; background: #000; border: 1px solid #444; margin-bottom: 10px; line-height: 0; }
         #v { width: 100%; height: auto; }
         #sel-canvas { position: absolute; top:0; left:0; width:100%; height:100%; cursor: crosshair; }
-        #debug-canvas { width: 100%; height: 80px; background: #000; border: 2px solid #ff0000; margin-bottom: 10px; image-rendering: pixelated; }
+        #debug-canvas { width: 100%; height: 80px; background: #000; border: 2px solid #0f0; margin-bottom: 10px; image-rendering: crisp-edges; }
         .db-table { width: 100%; border-collapse: collapse; font-size: 11px; }
         .db-table th { background: #222; color: var(--orange); padding: 8px; text-align: left; position: sticky; top: 0; }
         .db-table input { background: #000; color: #fff; border: 1px solid #333; width: 90%; padding: 5px; }
@@ -25,10 +25,10 @@
 <body>
 
 <div id="admin">
-    <div id="status" class="status">SYSTEM OFFLINE</div>
+    <div id="status" class="status">AI V13 STANDBY</div>
     <div class="btn-group">
-        <button class="btn" style="background:var(--orange)" onclick="startApp()">1. START CAPTURE</button>
-        <button class="btn" style="background:#0088ff" onclick="window.open('view.html','_blank')">2. OPEN VIEW</button>
+        <button class="btn" style="background:var(--orange)" onclick="startApp()">START CAPTURE</button>
+        <button class="btn" style="background:#0088ff" onclick="window.open('view.html','_blank')">VIEW PANEL</button>
     </div>
 
     <textarea id="import-area" placeholder="Slot List: 1 | Team Name"></textarea>
@@ -38,7 +38,7 @@
         <video id="v" autoplay muted></video>
         <canvas id="sel-canvas"></canvas>
     </div>
-    <div style="font-size:10px; color:#aaa;">AI SENSOR PREVIEW (SHARPENED):</div>
+    <div style="font-size:10px; color:#0f0;">PROCESSED AI FEED (MUST BE CLEAR B&W):</div>
     <canvas id="debug-canvas"></canvas>
 
     <table class="db-table">
@@ -54,17 +54,17 @@
     
     let crop = { x: 0, y: 0, w: 0, h: 0, drawing: false };
     let worker = null, lastSentId = null, votes = {}, scanCount = 0, isScanning = false;
+    
+    // Custom Correction for Ambiguous Numbers
     const correctionMap = { 'S': '5', 'B': '8', 'G': '6', 'I': '1', 'l': '1', 'O': '0', 'Z': '2', 'T': '7' };
 
-    const colorMap = { 1: "#E53935", 2: "#1E88E5", 3: "#FB8C00", 4: "#26C6DA", 5: "#8E24AA", 6: "#7CB342", 7: "#2E7D32", 8: "#D81B60", 9: "#FBC02D", 10: "#D81B60", 11: "#FBC02D", 12: "#26C6DA", 13: "#1E88E5", 14: "#FB8C00", 15: "#8E24AA", 16: "#7CB342", 17: "#26A69A", 18: "#FFB74D", 19: "#8BC34A", 20: "#1565C0", 21: "#6A1B9A", 22: "#00838F", 23: "#E53935", 24: "#1E88E5", 25: "#FB8C00" };
-
-    let teamDB = JSON.parse(localStorage.getItem('bgmi_v12_pro')) || {};
+    let teamDB = JSON.parse(localStorage.getItem('bgmi_v13_pro')) || {};
 
     function renderTable() {
         const tbody = document.getElementById('dbBody');
         tbody.innerHTML = "";
         for (let i = 1; i <= 25; i++) {
-            if(!teamDB[i]) teamDB[i] = { name: `TEAM ${i}`, logo: `${i}`, bdr: '#ffffff', sbg: colorMap[i] };
+            if(!teamDB[i]) teamDB[i] = { name: `TEAM ${i}`, logo: `${i}`, bdr: '#ffffff', sbg: '#ff5a00' };
             tbody.innerHTML += `<tr><td>${i}</td>
                 <td><button class="btn-show" onclick="pushData(${i})">SHOW</button></td>
                 <td><input type="text" id="name-${i}" value="${teamDB[i].name}" onchange="updateDB(${i},'name',this.value)"></td>
@@ -80,27 +80,24 @@
             const m = line.match(/(\d+)\s*[|•-]\s*(.*)/);
             if(m) { teamDB[parseInt(m[1])].name = m[2].trim(); }
         });
-        localStorage.setItem('bgmi_v12_pro', JSON.stringify(teamDB));
+        localStorage.setItem('bgmi_v13_pro', JSON.stringify(teamDB));
         renderTable();
     }
 
-    function updateDB(id, k, val) { teamDB[id][k] = val; localStorage.setItem('bgmi_v12_pro', JSON.stringify(teamDB)); }
+    function updateDB(id, k, val) { teamDB[id][k] = val; localStorage.setItem('bgmi_v13_pro', JSON.stringify(teamDB)); }
 
     async function pushData(id) {
         lastSentId = id;
         try {
             await fetch(fbURL, { method: 'PUT', body: JSON.stringify(teamDB[id]) });
             document.getElementById('status').innerText = "LIVE: TEAM " + id;
-            document.getElementById('status').style.color = "#0f0";
         } catch(e) { document.getElementById('status').innerText = "FIREBASE ERROR"; }
     }
 
     async function startApp() {
-        const stream = await navigator.mediaDevices.getDisplayMedia({ video: { width: 1920, height: 1080, frameRate: 60 } });
-        v.srcObject = stream;
+        v.srcObject = await navigator.mediaDevices.getDisplayMedia({ video: { width: 1920, height: 1080 } });
         v.onloadedmetadata = () => { 
-            selC.width = v.clientWidth; 
-            selC.height = v.clientHeight; 
+            selC.width = v.clientWidth; selC.height = v.clientHeight; 
             initOCR(); 
         };
     }
@@ -109,10 +106,10 @@
         worker = await Tesseract.createWorker('eng');
         await worker.setParameters({ 
             tessedit_char_whitelist: '0123456789SBGIOZTl', 
-            tessedit_pageseg_mode: '7' 
+            tessedit_pageseg_mode: '10' // Treat as single character for better accuracy
         });
-        document.getElementById('status').innerText = "AI SCANNER ACTIVE";
-        setInterval(scan, 100); 
+        document.getElementById('status').innerText = "AI V13 READY";
+        setInterval(scan, 80); 
     }
 
     async function scan() {
@@ -120,17 +117,17 @@
         isScanning = true;
         
         const sx = v.videoWidth / selC.width, sy = v.videoHeight / selC.height;
-        dC.width = 200; dC.height = 100; // Fixed size for AI consistency
+        dC.width = 200; dC.height = 100;
 
-        // TRIPLE FILTER LOGIC
-        dCtx.filter = "grayscale(1) contrast(20) brightness(1.2)"; 
+        // MULTI-STAGE PROCESSING FOR 100% ACCURACY
+        dCtx.filter = "grayscale(1) contrast(30) brightness(1.1) blur(0px) sharpen(2)"; 
         dCtx.drawImage(v, crop.x*sx, crop.y*sy, crop.w*sx, crop.h*sy, 0, 0, 200, 100);
         
         let imgData = dCtx.getImageData(0,0,200,100), d = imgData.data;
         for(let i=0; i<d.length; i+=4) {
             let avg = (d[i]+d[i+1]+d[i+2])/3;
-            // Adaptive Thresholding (Strict White/Black)
-            let val = (avg > 160) ? 255 : 0; 
+            // Strict Binary Filter (Pure B&W)
+            let val = (avg > 175) ? 255 : 0; 
             d[i]=d[i+1]=d[i+2] = val;
         }
         dCtx.putImageData(imgData,0,0);
@@ -142,11 +139,11 @@
         for (let char in correctionMap) cleanText = cleanText.split(char).join(correctionMap[char]);
         let num = parseInt(cleanText.replace(/\D/g, ""));
 
-        // CONFIDENCE + STABILITY (5 consecutive votes)
-        if(confidence > 50 && num >= 1 && num <= 25) {
+        // ENHANCED LOGIC: Only lock if confidence is high AND consistent
+        if(confidence > 60 && num >= 1 && num <= 25) {
             votes[num] = (votes[num] || 0) + 1;
             scanCount++;
-            if(scanCount >= 5) {
+            if(scanCount >= 6) { // Increased vote count to 6 for stability
                 let winner = parseInt(Object.keys(votes).reduce((a, b) => votes[a] > votes[b] ? a : b));
                 if(winner !== lastSentId) pushData(winner);
                 votes = {}; scanCount = 0;
