@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>BGMI AI ADMIN - INSTANT SYNC</title>
+    <title>BGMI AI ADMIN - OCR STABLE FIX</title>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
     <style>
@@ -12,25 +12,22 @@
         .btn-group { display: flex; gap: 8px; margin-bottom: 15px; }
         .btn { flex: 1; padding: 10px; font-weight: bold; cursor: pointer; border: none; border-radius: 4px; color: white; text-transform: uppercase; }
         .btn-start { background: var(--orange); }
-        .btn-import { background: #28a745; }
         .status { background: #000; padding: 10px; border: 1px solid #333; color: #0f0; font-family: monospace; text-align: center; margin-bottom: 10px; font-size: 16px; border-left: 5px solid #0f0; }
-        #import-area { width: 95%; height: 70px; background: #222; color: #ccc; border: 1px solid #444; padding: 8px; font-size: 11px; margin-bottom: 10px; border-radius: 4px; }
+        #import-area { width: 95%; height: 70px; background: #222; color: #ccc; border: 1px solid #444; padding: 8px; font-size: 11px; margin-bottom: 10px; }
         .preview-box { position: relative; width: 100%; background: #000; border: 1px solid #444; line-height: 0; margin-bottom: 15px; }
         #v { width: 100%; height: auto; }
         #sel-canvas { position: absolute; top:0; left:0; width:100%; height:100%; cursor: crosshair; }
         #debug-canvas { width: 100%; height: 80px; background: #fff; margin-bottom: 10px; border: 2px solid red; }
         .db-table { width: 100%; border-collapse: collapse; font-size: 11px; }
-        .db-table th { background: #222; padding: 5px; text-align: left; }
-        .db-table td { padding: 4px; border-bottom: 1px solid #222; }
         .db-table input { background: #1a1a1a; color: #fff; border: 1px solid #333; width: 95%; padding: 3px; }
     </style>
 </head>
 <body>
 
 <div id="admin">
-    <div class="status" id="status">AI READY - DRAW BOX TO START</div>
+    <div class="status" id="status">AI READY - DRAW BOX</div>
     <textarea id="import-area" placeholder="Paste Slot List Here..."></textarea>
-    <button class="btn btn-import" onclick="importSlots()">Import Names</button>
+    <button class="btn" style="background:#28a745; width:100%;" onclick="importSlots()">Import Names</button>
 
     <div class="btn-group" style="margin-top:15px;">
         <button class="btn btn-start" onclick="startApp()">1. Start Capture</button>
@@ -41,6 +38,7 @@
         <video id="v" autoplay muted></video>
         <canvas id="sel-canvas"></canvas>
     </div>
+    <div style="font-size:11px; color:grey;">OCR DEBUG (INVERTED):</div>
     <canvas id="debug-canvas"></canvas>
 
     <table class="db-table">
@@ -56,8 +54,9 @@
     
     let crop = { x: 0, y: 0, w: 0, h: 0, drawing: false };
     let worker = null, lastSentId = null, isScanning = false;
+    let scanHistory = [];
 
-    let teamDB = JSON.parse(localStorage.getItem('bgmi_db_v_instant')) || {};
+    let teamDB = JSON.parse(localStorage.getItem('bgmi_db_v_final_ocr')) || {};
 
     function renderTable() {
         const tbody = document.getElementById('dbBody');
@@ -85,12 +84,12 @@
                 if(slot >= 1 && slot <= 25) { teamDB[slot].name = name; document.getElementById(`name-${slot}`).value = name; }
             }
         });
-        localStorage.setItem('bgmi_db_v_instant', JSON.stringify(teamDB));
+        localStorage.setItem('bgmi_db_v_final_ocr', JSON.stringify(teamDB));
     }
 
     function updateDB(id, key, val) { 
         teamDB[id][key] = val; 
-        localStorage.setItem('bgmi_db_v_instant', JSON.stringify(teamDB)); 
+        localStorage.setItem('bgmi_db_v_final_ocr', JSON.stringify(teamDB)); 
         if(lastSentId == id) pushToCloud(teamDB[id]);
     }
 
@@ -106,8 +105,13 @@
 
     async function initOCR() {
         worker = await Tesseract.createWorker('eng');
-        await worker.setParameters({ tessedit_char_whitelist: '0123456789TEAMteam', tessedit_pageseg_mode: '7' });
-        document.getElementById('status').innerText = "AI ACTIVE - SCANNING";
+        await worker.setParameters({ 
+            tessedit_char_whitelist: '0123456789TEAMteam', 
+            tessedit_pageseg_mode: '7',
+            tessjs_create_hocr: '0',
+            tessjs_create_tsv: '0'
+        });
+        document.getElementById('status').innerText = "OCR ACTIVE";
         setInterval(scan, 200); 
     }
 
@@ -116,8 +120,9 @@
         isScanning = true;
         const sx = v.videoWidth / selC.width, sy = v.videoHeight / selC.height;
         dC.width = 400; dC.height = 100;
-        // HIGH CONTRAST BUT NO INVERT (To avoid glitches)
-        dCtx.filter = "grayscale(1) contrast(6) brightness(1.2)"; 
+        
+        // RE-ENABLED POWERFUL INVERT FILTER FOR ACCURACY
+        dCtx.filter = "grayscale(1) contrast(8) brightness(0.9) invert(1)"; 
         dCtx.drawImage(v, crop.x*sx, crop.y*sy, crop.w*sx, crop.h*sy, 0, 0, 400, 100);
         
         const { data: { text, confidence } } = await worker.recognize(dC);
@@ -125,19 +130,28 @@
 
         let match = text.replace(/\s+/g, "").match(/(\d+)/);
 
-        // INSTANT UPDATE LOGIC: Agar confidence sahi hai toh turant bhej do
-        if(confidence > 50 && match) {
+        if(confidence > 40 && match) {
             let num = parseInt(match[0]);
-            if(num >= 1 && num <= 25 && num !== lastSentId) {
-                lastSentId = num;
-                pushToCloud(teamDB[num]);
-                document.getElementById('status').innerText = "SENT: " + teamDB[num].name;
-                document.getElementById('status').style.color = "#0f0";
+            if(num >= 1 && num <= 25) {
+                scanHistory.push(num);
+                // Instant update if we see the same number twice
+                if(scanHistory.length >= 2) {
+                    const frequent = scanHistory[scanHistory.length-1];
+                    if(frequent !== lastSentId) {
+                        lastSentId = frequent;
+                        pushToCloud(teamDB[frequent]);
+                        document.getElementById('status').innerText = "SENT: " + teamDB[frequent].name;
+                    }
+                    scanHistory = [];
+                }
             }
+        } else {
+            // Auto-Reset memory if nothing is found for a moment
+            if(scanHistory.length > 5) scanHistory = [];
         }
     }
 
-    selC.onmousedown = (e) => { crop.x = e.offsetX; crop.y = e.offsetY; crop.drawing = true; lastSentId = null; };
+    selC.onmousedown = (e) => { crop.x = e.offsetX; crop.y = e.offsetY; crop.drawing = true; scanHistory = []; lastSentId = null; };
     selC.onmousemove = (e) => { if(crop.drawing) { sCtx.clearRect(0,0,selC.width,selC.height); sCtx.strokeStyle = "#0f0"; sCtx.lineWidth=2; sCtx.strokeRect(crop.x, crop.y, e.offsetX-crop.x, e.offsetY-crop.y); } };
     selC.onmouseup = (e) => { crop.w = Math.abs(e.offsetX-crop.x); crop.h = Math.abs(e.offsetY-crop.y); crop.drawing = false; };
 </script>
