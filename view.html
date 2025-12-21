@@ -2,16 +2,14 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>BGMI VIEW ONLINE - FIXED</title>
+    <title>BGMI VIEW ONLINE</title>
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
     <style>
-        /* Green Screen Background */
         body { margin:0; background:#00ff00; overflow:hidden; font-family:'Bebas Neue'; display:flex; align-items:flex-end; height:100vh; padding: 0 0 100px 100px; }
         
-        /* Container aligned to TOP */
+        /* ALIGNMENT: Logo and Strip start together from top */
         #container { display:flex; align-items: flex-start; }
         
-        /* Square Logo Box */
         .logo-box { 
             background: var(--sbg); 
             width: 140px; height: 140px; 
@@ -20,14 +18,13 @@
             z-index: 10; box-sizing: border-box; 
         }
         .logo-box img { width: 90%; height: 90%; object-fit: contain; }
-        .logo-box span { color: white; font-size: 70px; }
+        .logo-box span { color: white; font-size: 80px; }
 
-        /* Thin Name Strip (40% of logo height) */
         .name-strip { 
             background: var(--sbg); 
-            height: 56px; /* 140px * 0.4 = 56px */
+            height: 56px; /* Exactly 40% of logo height */
             display: flex; align-items: center; 
-            padding: 0 60px 0 30px; color: white; font-size: 40px; 
+            padding: 0 60px 0 30px; color: white; font-size: 38px; 
             clip-path: polygon(0 0, 95% 0, 100% 100%, 0 100%); 
             margin-left: -2px; 
             border-bottom: 5px solid var(--bdr); 
@@ -45,25 +42,22 @@
         
         async function sync() {
             try {
-                // Anti-cache fetch (?v=...)
-                const r = await fetch(fbURL + "?v=" + Date.now());
-                const d = await r.json();
-                if(!d) return;
+                const response = await fetch(fbURL + "?nocache=" + Date.now());
+                const data = await response.json();
+                if(!data) return;
 
-                document.body.style.setProperty('--bdr', d.bdr || '#ffffff');
-                document.body.style.setProperty('--sbg', d.sbg || '#ff5a00');
-                document.getElementById('n').innerText = (d.name || "TEAM").toUpperCase();
+                document.body.style.setProperty('--bdr', data.bdr);
+                document.body.style.setProperty('--sbg', data.sbg);
+                document.getElementById('n').innerText = data.name.toUpperCase();
                 
                 const l = document.getElementById('l');
-                if(d.logo && d.logo.startsWith('http')) {
-                    l.innerHTML = `<img src="${d.logo}">`;
+                if(data.logo && data.logo.startsWith('http')) {
+                    l.innerHTML = `<img src="${data.logo}">`;
                 } else {
-                    l.innerHTML = `<span>${d.logo || ''}</span>`;
+                    l.innerHTML = `<span>${data.logo}</span>`;
                 }
-            } catch(e) { console.log("Sync Error"); }
+            } catch(e) {}
         }
-
-        // Fast Sync every 500ms
         setInterval(sync, 500);
     </script>
 </body>
