@@ -2,157 +2,146 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>BGMI AI V17 - 100% ACCURACY FIX</title>
+    <title>BGMI AI V19 - DUAL SCREEN</title>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
         :root { --orange: #ff5a00; --blue: #0088ff; }
         body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #050505; color: white; display: flex; height: 100vh; }
         #admin { width: 650px; background: #111; border-right: 2px solid var(--orange); padding: 15px; overflow-y: auto; }
-        .status { background: #000; padding: 12px; border: 1px solid #333; color: #0f0; text-align: center; margin-bottom: 10px; font-size: 18px; border-left: 5px solid #0f0; font-family: monospace; }
+        .status { background: #000; padding: 10px; border: 1px solid #333; color: #0f0; text-align: center; margin-bottom: 10px; font-size: 16px; border-left: 5px solid #0f0; }
         .btn-group { display: flex; gap: 10px; margin-bottom: 10px; }
         .btn { flex: 1; padding: 12px; font-weight: bold; cursor: pointer; border: none; border-radius: 4px; color: white; text-transform: uppercase; }
-        #import-area { width: 95%; height: 60px; background: #1a1a1a; color: #0f0; border: 1px solid #333; padding: 10px; font-size: 11px; margin-bottom: 5px; border-radius: 5px; }
-        .preview-box { position: relative; width: 100%; background: #000; border: 1px solid #444; margin-bottom: 10px; line-height: 0; }
-        #v { width: 100%; height: auto; }
-        #sel-canvas { position: absolute; top:0; left:0; width:100%; height:100%; cursor: crosshair; }
-        #debug-canvas { width: 100%; height: 90px; background: #000; border: 2px solid #0f0; margin-bottom: 10px; image-rendering: pixelated; }
+        
+        /* Dual Preview Grid */
+        .dual-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+        .preview-box { position: relative; background: #000; border: 1px solid #444; line-height: 0; }
+        video { width: 100%; height: auto; }
+        canvas.sel { position: absolute; top:0; left:0; width:100%; height:100%; cursor: crosshair; }
+        
+        #debug-canvas { width: 100%; height: 70px; background: #000; border: 2px solid #0f0; margin-bottom: 10px; }
         .db-table { width: 100%; border-collapse: collapse; font-size: 11px; }
         .db-table th { background: #222; color: var(--orange); padding: 8px; text-align: left; position: sticky; top: 0; }
-        .db-table tr.off { opacity: 0.3; }
         .db-table input { background: #000; color: #fff; border: 1px solid #333; width: 85%; padding: 4px; }
-        .toggle-btn { cursor: pointer; padding: 4px 8px; border-radius: 4px; border: none; font-weight: bold; width: 45px; }
-        .on { background: #28a745; color: white; }
-        .off-btn { background: #444; color: #999; }
-        .manual-show { background: var(--blue); color: white; border: none; padding: 6px; cursor: pointer; border-radius: 3px; font-weight: bold; width: 100%; }
+        .manual-show { background: var(--blue); color: white; border: none; padding: 5px; cursor: pointer; border-radius: 3px; font-weight: bold; width: 100%; }
     </style>
 </head>
 <body>
 
 <div id="admin">
-    <div id="status" class="status">AI V17: 100% ACCURACY MODE</div>
+    <div id="status" class="status">DUAL SCREEN MODE READY</div>
+    
     <div class="btn-group">
-        <button class="btn" style="background:var(--orange)" onclick="startApp()">START CAPTURE</button>
-        <button class="btn" style="background:var(--blue)" onclick="window.open('view.html','_blank')">VIEW PANEL</button>
+        <button class="btn" style="background:var(--orange)" onclick="startCapture(1)">1. CAPTURE SCR 1</button>
+        <button class="btn" style="background:#e65100" onclick="startCapture(2)">2. CAPTURE SCR 2</button>
     </div>
 
-    <textarea id="import-area" placeholder="Slot List: 1 | Team Name"></textarea>
-    <button class="btn" style="background:#333; width:100%; margin-bottom:15px; height:30px; padding:0; font-size:12px;" onclick="importSlots()">UPDATE SLOT NAMES</button>
-
-    <div class="preview-box">
-        <video id="v" autoplay muted></video>
-        <canvas id="sel-canvas"></canvas>
+    <div class="dual-grid">
+        <div class="preview-box">
+            <video id="v1" autoplay muted></video>
+            <canvas id="c1" class="sel"></canvas>
+            <div style="position:absolute; top:0; background:rgba(0,0,0,0.7); font-size:10px; padding:2px;">SCREEN 1</div>
+        </div>
+        <div class="preview-box">
+            <video id="v2" autoplay muted></video>
+            <canvas id="c2" class="sel"></canvas>
+            <div style="position:absolute; top:0; background:rgba(0,0,0,0.7); font-size:10px; padding:2px;">SCREEN 2</div>
+        </div>
     </div>
-    <div style="font-size:10px; color:#0f0; margin-bottom:5px;">AI VISION FEED (PIXEL THICKENING ON):</div>
+
+    <div style="font-size:10px; color:#0f0;">AI COMBINED FEED:</div>
     <canvas id="debug-canvas"></canvas>
 
     <table class="db-table">
-        <thead><tr><th>#</th><th>OCR</th><th>MANUAL</th><th>TEAM NAME</th><th>LOGO</th><th>BG</th></tr></thead>
+        <thead><tr><th>#</th><th>ACT</th><th>MANUAL</th><th>TEAM NAME</th><th>LOGO</th></tr></thead>
         <tbody id="dbBody"></tbody>
     </table>
 </div>
 
 <script>
-    const fbURL = "https://bgmi-overlay-default-rtdb.firebaseio.com/liveData.json"; 
-    const v = document.getElementById('v'), selC = document.getElementById('sel-canvas'), sCtx = selC.getContext('2d');
-    const dC = document.getElementById('debug-canvas'), dCtx = dC.getContext('2d');
-    
-    let crop = { x: 0, y: 0, w: 0, h: 0, drawing: false };
+    const fbURL = "https://bgmi-overlay-default-rtdb.firebaseio.com/liveData.json";
+    let crops = { 1: {x:0,y:0,w:0,h:0,draw:false}, 2: {x:0,y:0,w:0,h:0,draw:false} };
     let worker = null, lastSentId = null, votes = {}, scanCount = 0, isScanning = false;
-    const correctionMap = { 'S': '5', 's': '5', 'B': '8', 'G': '6', 'I': '1', 'l': '1', 'O': '0', 'Z': '2', 'T': '7', 'Q': '9', 'g': '9' };
+    const correctionMap = { 'S': '5', 'B': '8', 'G': '6', 'I': '1', 'l': '1', 'O': '0', 'Z': '2', 'T': '7', 'Q': '9' };
 
-    let teamDB = JSON.parse(localStorage.getItem('bgmi_v17_db')) || {};
-    let activeSlots = JSON.parse(localStorage.getItem('bgmi_v17_active')) || Array(26).fill(true);
+    let teamDB = JSON.parse(localStorage.getItem('bgmi_v19_db')) || {};
 
     function renderTable() {
-        const tbody = document.getElementById('dbBody');
-        tbody.innerHTML = "";
+        const tbody = document.getElementById('dbBody'); tbody.innerHTML = "";
         for (let i = 1; i <= 25; i++) {
             if(!teamDB[i]) teamDB[i] = { name: `TEAM ${i}`, logo: `${i}`, sbg: '#ff5a00' };
-            const isON = activeSlots[i];
-            tbody.innerHTML += `<tr class="${isON ? '' : 'off'}">
-                <td>${i}</td>
-                <td><button class="toggle-btn ${isON ? 'on' : 'off-btn'}" onclick="toggleSlot(${i})">${isON ? 'ON' : 'OFF'}</button></td>
+            tbody.innerHTML += `<tr><td>${i}</td>
+                <td><input type="checkbox" checked id="active-${i}"></td>
                 <td><button class="manual-show" onclick="pushData(${i})">SHOW</button></td>
                 <td><input type="text" value="${teamDB[i].name}" onchange="updateDB(${i},'name',this.value)"></td>
-                <td><input type="text" value="${teamDB[i].logo}" onchange="updateDB(${i},'logo',this.value)"></td>
-                <td><input type="color" value="${teamDB[i].sbg}" onchange="updateDB(${i},'sbg',this.value)"></td></tr>`;
+                <td><input type="text" value="${teamDB[i].logo}" onchange="updateDB(${i},'logo',this.value)"></td></tr>`;
         }
     }
     renderTable();
 
-    function importSlots() {
-        document.getElementById('import-area').value.split('\n').forEach(line => {
-            const m = line.match(/(\d+)\s*[|•-]\s*(.*)/);
-            if(m) { teamDB[parseInt(m[1])].name = m[2].trim(); }
-        });
-        localStorage.setItem('bgmi_v17_db', JSON.stringify(teamDB));
-        renderTable();
-    }
-
-    function toggleSlot(id) { activeSlots[id] = !activeSlots[id]; localStorage.setItem('bgmi_v17_active', JSON.stringify(activeSlots)); renderTable(); }
-    function updateDB(id, k, val) { teamDB[id][k] = val; localStorage.setItem('bgmi_v17_db', JSON.stringify(teamDB)); }
+    function updateDB(id, k, val) { teamDB[id][k] = val; localStorage.setItem('bgmi_v19_db', JSON.stringify(teamDB)); }
 
     async function pushData(id) {
         lastSentId = id;
-        try {
-            await fetch(fbURL, { method: 'PUT', body: JSON.stringify(teamDB[id]) });
-            document.getElementById('status').innerText = "LIVE: " + teamDB[id].name;
-        } catch(e) {}
+        try { await fetch(fbURL, { method: 'PUT', body: JSON.stringify(teamDB[id]) }); 
+        document.getElementById('status').innerText = "LIVE: " + teamDB[id].name; } catch(e){}
     }
 
-    async function startApp() {
-        v.srcObject = await navigator.mediaDevices.getDisplayMedia({ video: { width: 1920, height: 1080 } });
-        v.onloadedmetadata = () => { selC.width = v.clientWidth; selC.height = v.clientHeight; initOCR(); };
+    async function startCapture(id) {
+        const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+        const v = document.getElementById('v' + id);
+        const c = document.getElementById('c' + id);
+        v.srcObject = stream;
+        v.onloadedmetadata = () => { c.width = v.clientWidth; c.height = v.clientHeight; if(!worker) initOCR(); };
+        setupDrawing(id, c, v);
+    }
+
+    function setupDrawing(id, canvas, video) {
+        const ctx = canvas.getContext('2d');
+        canvas.onmousedown = (e) => { crops[id].x = e.offsetX; crops[id].y = e.offsetY; crops[id].draw = true; lastSentId = null; };
+        canvas.onmousemove = (e) => { if(crops[id].draw) { ctx.clearRect(0,0,canvas.width,canvas.height); ctx.strokeStyle = "#0f0"; ctx.strokeRect(crops[id].x, crops[id].y, e.offsetX-crops[id].x, e.offsetY-crops[id].y); } };
+        canvas.onmouseup = (e) => { crops[id].w = Math.abs(e.offsetX-crops[id].x); crops[id].h = Math.abs(e.offsetY-crops[id].y); crops[id].draw = false; };
     }
 
     async function initOCR() {
         worker = await Tesseract.createWorker('eng');
-        await worker.setParameters({ tessedit_char_whitelist: '0123456789SBGIOZTlQg', tessedit_pageseg_mode: '10' });
-        document.getElementById('status').innerText = "V17 ACTIVE";
-        setInterval(scan, 60); 
+        await worker.setParameters({ tessedit_char_whitelist: '0123456789SBGIOZTlQ', tessedit_pageseg_mode: '10' });
+        setInterval(scanBoth, 100);
     }
 
-    async function scan() {
-        if(!v.srcObject || crop.w < 5 || isScanning) return;
+    async function scanBoth() {
+        if(isScanning) return;
+        // Turn by turn scanning for both screens
+        await scanScreen(1);
+        await scanScreen(2);
+    }
+
+    async function scanScreen(id) {
+        const v = document.getElementById('v'+id), c = document.getElementById('c'+id), crop = crops[id];
+        if(!v.srcObject || crop.w < 5) return;
         isScanning = true;
-        const sx = v.videoWidth / selC.width, sy = v.videoHeight / selC.height;
-        dC.width = 240; dC.height = 120; // Increased size
-
-        // STAGE 1: CONTRAST & BRIGHTNESS
-        dCtx.filter = "grayscale(1) contrast(40) brightness(1.3) invert(1)"; 
-        dCtx.drawImage(v, crop.x*sx, crop.y*sy, crop.w*sx, crop.h*sy, 0, 0, 240, 120);
+        const dc = document.getElementById('debug-canvas'), dctx = dc.getContext('2d');
+        const sx = v.videoWidth / c.width, sy = v.videoHeight / c.height;
         
-        let imgData = dCtx.getImageData(0,0,240,120), d = imgData.data;
-        // STAGE 2: BINARY THRESHOLD & PIXEL THICKENING (For 5 and 6 fix)
-        for(let i=0; i<d.length; i+=4) {
-            let avg = (d[i]+d[i+1]+d[i+2])/3;
-            let val = (avg > 140) ? 255 : 0; // Strict B&W
-            d[i]=d[i+1]=d[i+2] = val;
-        }
-        dCtx.putImageData(imgData,0,0);
-
-        const { data: { text, confidence } } = await worker.recognize(dC);
+        dc.width = 200; dc.height = 100;
+        dctx.filter = "grayscale(1) contrast(40) invert(1)";
+        dctx.drawImage(v, crop.x*sx, crop.y*sy, crop.w*sx, crop.h*sy, 0, 0, 200, 100);
+        
+        const { data: { text, confidence } } = await worker.recognize(dc);
         isScanning = false;
 
         let cleanText = text.trim();
         for (let char in correctionMap) cleanText = cleanText.split(char).join(correctionMap[char]);
         let num = parseInt(cleanText.replace(/\D/g, ""));
 
-        // STAGE 3: STABILITY LOCK (8 Consecutive votes for 100% truth)
-        if(confidence > 60 && num >= 1 && num <= 25 && activeSlots[num]) {
-            votes[num] = (votes[num] || 0) + 1;
-            scanCount++;
-            if(scanCount >= 8) { 
+        if(confidence > 65 && num >= 1 && num <= 25) {
+            votes[num] = (votes[num] || 0) + 1; scanCount++;
+            if(scanCount >= 6) {
                 let winner = parseInt(Object.keys(votes).reduce((a, b) => votes[a] > votes[b] ? a : b));
                 if(winner !== lastSentId) pushData(winner);
                 votes = {}; scanCount = 0;
             }
         }
     }
-
-    selC.onmousedown = (e) => { crop.x = e.offsetX; crop.y = e.offsetY; crop.drawing = true; lastSentId = null; votes={}; };
-    selC.onmousemove = (e) => { if(crop.drawing) { sCtx.clearRect(0,0,selC.width,selC.height); sCtx.strokeStyle = "#0f0"; sCtx.lineWidth=3; sCtx.strokeRect(crop.x, crop.y, e.offsetX-crop.x, e.offsetY-crop.y); } };
-    selC.onmouseup = (e) => { crop.w = Math.abs(e.offsetX-crop.x); crop.h = Math.abs(e.offsetY-crop.y); crop.drawing = false; };
 </script>
 </body>
 </html>
