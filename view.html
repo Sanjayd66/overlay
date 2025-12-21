@@ -2,116 +2,55 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>BGMI LIVE VIEW - STABLE</title>
+    <title>BGMI VIEW PANEL - FIXED</title>
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
     <style>
-        body { 
-            margin: 0; 
-            background: #00ff00; /* Green Screen */
-            overflow: hidden; 
-            font-family: 'Bebas Neue', cursive;
-            display: flex;
-            align-items: flex-end;
-            height: 100vh;
-            padding-bottom: 100px;
-            padding-left: 100px;
-        }
-
-        #container { 
-            display: flex; 
-            align-items: flex-start; 
-            opacity: 0; 
-            transition: 0.3s ease; 
-        }
-
-        .active { opacity: 1 !important; }
-
-        /* Slot Number Box */
+        body { margin: 0; background: #00ff00; overflow: hidden; font-family: 'Bebas Neue', cursive; display: flex; align-items: flex-end; height: 100vh; padding-bottom: 50px; padding-left: 50px; }
+        #container { display: flex; align-items: flex-start; }
+        
+        /* Logo Box */
         .logo-box { 
             background: var(--sbg, #ff5a00); 
-            width: 120px; 
-            height: 120px; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
+            width: 130px; height: 130px; 
             border: 4px solid var(--bdr, #ffffff); 
-            z-index: 10; 
+            display: flex; align-items: center; justify-content: center; overflow: hidden;
         }
-
-        .logo-box span { 
-            color: white; 
-            font-size: 80px; 
-        }
+        .logo-box img { width: 100%; height: 100%; object-fit: cover; }
 
         /* Team Name Strip */
         .name-strip { 
             background: var(--sbg, #ff5a00); 
-            height: 60px; 
-            display: flex; 
-            align-items: center; 
-            padding: 0 40px 0 20px; 
-            color: white; 
-            font-size: 35px; 
+            height: 65px; display: flex; align-items: center; padding: 0 40px; 
+            color: white; font-size: 38px; 
             clip-path: polygon(0 0, 95% 0, 100% 100%, 0 100%); 
-            margin-left: -2px; 
-            margin-top: 30px; 
+            margin-top: 32px; margin-left: -2px;
             border-bottom: 4px solid var(--bdr, #ffffff);
         }
     </style>
 </head>
 <body>
-
     <div id="container">
-        <div class="logo-box" id="lbox">
-            <span id="slot-num">0</span>
+        <div class="logo-box">
+            <img id="team-logo" src="">
         </div>
-        <div class="name-strip" id="nstrip">
+        <div class="name-strip">
             <span id="team-name">LOADING...</span>
         </div>
     </div>
-
 <script>
-    // 1. APNA FIREBASE URL YAHAN DALEIN
     const fbURL = "https://bgmi-overlay-default-rtdb.firebaseio.com/liveData.json"; 
-    
-    const container = document.getElementById('container');
-    const slotNum = document.getElementById('slot-num');
-    const teamName = document.getElementById('team-name');
-    
-    let lastData = "";
-
-    async function syncView() {
+    async function sync() {
         try {
-            // Adding timestamp to bypass browser cache
-            const response = await fetch(fbURL + "?t=" + new Date().getTime());
-            const data = await response.json();
-            
-            if (!data) return;
-
-            // Check if data is actually new to prevent flickering
-            const dataString = JSON.stringify(data);
-            if (dataString === lastData) return;
-            
-            lastData = dataString;
-
-            // Update UI
-            slotNum.innerText = data.logo || "0";
-            teamName.innerText = data.name || "TEAM";
-            
-            // Set Colors
-            document.body.style.setProperty('--bdr', data.bdr || '#ffffff');
-            document.body.style.setProperty('--sbg', data.sbg || '#ff5a00');
-
-            // Show with animation
-            container.classList.add('active');
-
-        } catch (e) {
-            console.log("Sync Error:", e);
-        }
+            const res = await fetch(fbURL + "?t=" + Date.now());
+            const data = await res.json();
+            if(!data) return;
+            document.getElementById('team-name').innerText = data.name;
+            document.getElementById('team-logo').src = data.logo; // LOGO LINK FIX
+            document.body.style.setProperty('--bdr', data.bdr);
+            document.body.style.setProperty('--sbg', data.sbg);
+        } catch(e) {}
     }
-
-    // Har 500ms (0.5 sec) mein update check karega
-    setInterval(syncView, 500);
+    setInterval(sync, 500);
 </script>
 </body>
 </html>
