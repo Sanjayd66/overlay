@@ -2,41 +2,59 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>BGMI CONTROL - FINAL FIX</title>
+    <title>BGMI PRO CONTROL - COLOR SYNC</title>
     <style>
         :root { --primary: #ff5a00; --bg: #050505; --card: #1a1a1a; --live: #00ff00; }
         body { margin: 0; font-family: sans-serif; background: var(--bg); color: white; }
-        .header { display: flex; justify-content: space-between; align-items: center; padding: 15px; background: #111; border-bottom: 2px solid var(--primary); }
+        .header { display: flex; justify-content: space-between; align-items: center; padding: 15px; background: #111; border-bottom: 2px solid var(--primary); position: sticky; top: 0; z-index: 10; }
         .grid-container { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; padding: 15px; }
-        .slot-btn { background: var(--card); border: 2px solid #333; color: white; padding: 20px; font-size: 1.5rem; font-weight: bold; cursor: pointer; border-radius: 8px; display: flex; flex-direction: column; align-items: center; }
-        .slot-btn.active { border-color: var(--live); background: #002200; }
-        .slot-btn span { font-size: 0.7rem; color: #aaa; margin-top: 5px; text-transform: uppercase; }
+        
+        .slot-btn { 
+            background: var(--card); border: 2px solid #333; color: white; padding: 20px; 
+            font-size: 1.5rem; font-weight: bold; cursor: pointer; border-radius: 8px; 
+            display: flex; flex-direction: column; align-items: center; transition: 0.2s;
+        }
+        .slot-btn.active { border-color: var(--live); background: #002200; box-shadow: 0 0 10px var(--live); }
+        .slot-btn span { font-size: 0.7rem; color: #aaa; margin-top: 5px; text-transform: uppercase; text-align: center; }
+
         #settingsModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 100; overflow-y: auto; }
-        .modal-content { background: #111; width: 90%; max-width: 800px; margin: 20px auto; padding: 20px; border: 1px solid var(--primary); }
-        textarea { width: 100%; height: 150px; background: #000; color: #0f0; border: 1px solid #444; padding: 10px; font-family: monospace; }
+        .modal-content { background: #111; width: 90%; max-width: 850px; margin: 20px auto; padding: 25px; border: 1px solid var(--primary); border-radius: 10px; }
+        
+        textarea { width: 100%; height: 150px; background: #000; color: #0f0; border: 1px solid #444; padding: 10px; font-family: monospace; margin-bottom: 10px; }
         .config-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        .config-table input { background: #000; color: #fff; border: 1px solid #333; padding: 5px; width: 95%; }
-        .btn-update { background: var(--primary); color: white; border: none; padding: 10px 20px; font-weight: bold; cursor: pointer; margin: 10px 0; border-radius: 4px; }
+        .config-table th { color: var(--primary); padding: 10px; text-align: left; border-bottom: 1px solid #333; }
+        .config-table input { background: #000; color: #fff; border: 1px solid #333; padding: 8px; width: 95%; border-radius: 4px; }
+        
+        .btn-group { display: flex; gap: 10px; margin-bottom: 20px; }
+        .btn-update { background: var(--primary); color: white; border: none; padding: 12px 25px; font-weight: bold; cursor: pointer; border-radius: 4px; flex: 2; }
+        .btn-reset { background: #444; color: white; border: none; padding: 12px 25px; font-weight: bold; cursor: pointer; border-radius: 4px; flex: 1; }
+        .btn-close { background: #ff0000; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 4px; font-weight: bold; float: right; }
     </style>
 </head>
 <body>
 
 <div class="header">
-    <div id="status" style="color:var(--live)">● STANDBY</div>
-    <button onclick="toggleModal(true)" style="padding:8px 15px; cursor:pointer;">⚙ SETTINGS</button>
+    <div id="status" style="color:var(--live); font-weight: bold;">● STANDBY</div>
+    <button onclick="toggleModal(true)" style="padding:10px 20px; cursor:pointer; background:#333; color:white; border:none; border-radius:5px;">⚙ SETTINGS / EDIT SLOTS</button>
 </div>
 
 <div class="grid-container" id="mainGrid"></div>
 
 <div id="settingsModal">
     <div class="modal-content">
-        <button onclick="toggleModal(false)" style="float:right; background:red; color:white; border:none; padding:10px; cursor:pointer;">CLOSE & SAVE</button>
-        <h2>Slot List Import</h2>
-        <textarea id="importArea" placeholder="Paste here:&#10;Slot 4 - TEAM NAME&#10;17. ANOTHER TEAM"></textarea>
-        <button class="btn-update" onclick="importList()">UPDATE ALL SLOTS</button>
+        <button class="btn-close" onclick="toggleModal(false)">CLOSE & SAVE</button>
+        <h2 style="color:var(--primary)">Match Setup</h2>
+        
+        <p>Paste Slot List (Example: 17. Team Name or Slot 17 - Team Name)</p>
+        <textarea id="importArea" placeholder="Paste list from WhatsApp/Discord..."></textarea>
+        
+        <div class="btn-group">
+            <button class="btn-update" onclick="importList()">UPDATE NAMES & AUTO-COLORS</button>
+            <button class="btn-reset" onclick="resetAll()">RESET ALL</button>
+        </div>
         
         <table class="config-table">
-            <thead><tr><th>Slot</th><th>Team Name</th><th>Logo ID</th><th>Color</th></tr></thead>
+            <thead><tr><th width="50">Slot</th><th>Team Name</th><th width="100">Logo ID</th><th width="80">BG Color</th></tr></thead>
             <tbody id="configBody"></tbody>
         </table>
     </div>
@@ -44,21 +62,48 @@
 
 <script>
     const fbURL = "https://bgmi-overlay-default-rtdb.firebaseio.com/liveData.json";
-    let teamDB = JSON.parse(localStorage.getItem('manual_db_v4')) || {};
+    let teamDB = JSON.parse(localStorage.getItem('manual_db_v5')) || {};
     let currentId = null;
 
-    for(let i=1; i<=25; i++) { if(!teamDB[i]) teamDB[i] = { name: `Team ${i}`, logo: `${i}`, sbg: '#ff5a00' }; }
+    // Standard BGMI Slot Colors (Based on your image)
+    const slotColors = {
+        5: "#8a2be2", 8: "#e91e63", 9: "#ff9800", 10: "#9c27b0",
+        11: "#ffeb3b", 12: "#00bcd4", 13: "#607d8b", 14: "#ff5722",
+        17: "#00ffff", 18: "#ffaa00", 19: "#4caf50", 20: "#e91e63",
+        21: "#00ff7f", 22: "#2196f3", 23: "#ff5722", 24: "#4caf50"
+    };
+
+    function initDB() {
+        for(let i=1; i<=25; i++) {
+            if(!teamDB[i]) {
+                teamDB[i] = { 
+                    name: `Team ${i}`, 
+                    logo: `${i}`, 
+                    sbg: slotColors[i] || "#ff5a00" 
+                };
+            }
+        }
+    }
 
     function renderUI() {
         const grid = document.getElementById('mainGrid');
         const table = document.getElementById('configBody');
         grid.innerHTML = ""; table.innerHTML = "";
+        
         for(let i=1; i<=25; i++) {
-            grid.innerHTML += `<button class="slot-btn ${currentId==i?'active':''}" onclick="sendData(${i})">${i}<span>${teamDB[i].name}</span></button>`;
-            table.innerHTML += `<tr><td>${i}</td>
-                <td><input type="text" value="${teamDB[i].name}" onchange="updateRow(${i},'name',this.value)"></td>
-                <td><input type="text" value="${teamDB[i].logo}" onchange="updateRow(${i},'logo',this.value)"></td>
-                <td><input type="color" value="${teamDB[i].sbg}" onchange="updateRow(${i},'sbg',this.value)"></td></tr>`;
+            grid.innerHTML += `
+                <button id="slot-${i}" class="slot-btn ${currentId==i?'active':''}" onclick="sendData(${i})">
+                    ${i}
+                    <span id="label-${i}">${teamDB[i].name}</span>
+                </button>`;
+            
+            table.innerHTML += `
+                <tr>
+                    <td>${i}</td>
+                    <td><input type="text" value="${teamDB[i].name}" onchange="updateRow(${i},'name',this.value)"></td>
+                    <td><input type="text" value="${teamDB[i].logo}" onchange="updateRow(${i},'logo',this.value)"></td>
+                    <td><input type="color" value="${teamDB[i].sbg}" onchange="updateRow(${i},'sbg',this.value)"></td>
+                </tr>`;
         }
     }
 
@@ -69,14 +114,27 @@
             const m = clean.match(/^(\d+)[\s.\-|—–:]+(.*)/);
             if(m) {
                 const id = parseInt(m[1]);
-                if(id >= 1 && id <= 25) teamDB[id].name = m[2].trim();
+                if(id >= 1 && id <= 25) {
+                    teamDB[id].name = m[2].trim();
+                    // Set color if it exists in presets
+                    if(slotColors[id]) teamDB[id].sbg = slotColors[id];
+                }
             }
         });
         save();
+        alert("Names Updated & Colors Synced!");
+    }
+
+    function resetAll() {
+        if(confirm("Clear all team names?")) {
+            teamDB = {};
+            initDB();
+            save();
+        }
     }
 
     function updateRow(id, k, v) { teamDB[id][k] = v; save(); }
-    function save() { localStorage.setItem('manual_db_v4', JSON.stringify(teamDB)); renderUI(); }
+    function save() { localStorage.setItem('manual_db_v5', JSON.stringify(teamDB)); renderUI(); }
     function toggleModal(s) { document.getElementById('settingsModal').style.display = s?'block':'none'; }
     
     async function sendData(id) {
@@ -84,10 +142,12 @@
         try {
             await fetch(fbURL, { method: 'PUT', body: JSON.stringify(teamDB[id]) });
             document.getElementById('status').innerText = "● LIVE: " + teamDB[id].name;
+            document.getElementById('status').style.color = teamDB[id].sbg;
             renderUI();
         } catch(e) { alert("Firebase Error!"); }
     }
 
+    initDB();
     renderUI();
 </script>
 </body>
