@@ -2,106 +2,153 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>BGMI ADMIN V25 - FULL RESTORED</title>
+    <title>BGMI PRO CONTROL - COLOR SYNC</title>
     <style>
-        :root { --orange: #ff5a00; --blue: #0088ff; --green: #28a745; }
-        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #050505; color: white; display: flex; flex-direction: column; align-items: center; padding: 20px; }
-        .status { background: #000; padding: 15px; border: 1px solid #333; color: #0f0; width: 650px; text-align: center; margin-bottom: 10px; border-left: 5px solid #0f0; font-weight: bold; }
-        .btn-group { display: flex; gap: 10px; margin-bottom: 20px; width: 650px; }
-        .btn { flex: 1; padding: 12px; font-weight: bold; cursor: pointer; border: none; border-radius: 4px; color: white; text-transform: uppercase; }
-        #import-area { width: 630px; height: 60px; background: #1a1a1a; color: #0f0; border: 1px solid #333; padding: 10px; font-size: 11px; margin-bottom: 10px; border-radius: 5px; resize:none; }
+        :root { --primary: #ff5a00; --bg: #050505; --card: #1a1a1a; --live: #00ff00; }
+        body { margin: 0; font-family: sans-serif; background: var(--bg); color: white; }
+        .header { display: flex; justify-content: space-between; align-items: center; padding: 15px; background: #111; border-bottom: 2px solid var(--primary); position: sticky; top: 0; z-index: 10; }
+        .grid-container { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; padding: 15px; }
         
-        .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; width: 650px; margin-bottom: 20px; }
-        .slot-card { background: #111; border: 1px solid #333; padding: 10px; border-radius: 8px; text-align: center; cursor: pointer; transition: 0.2s; }
-        .slot-card:hover { border-color: var(--orange); }
-        .slot-card.active { border-color: #0f0; box-shadow: 0 0 10px rgba(0,255,0,0.5); }
-        .slot-num { font-size: 20px; font-weight: bold; color: var(--orange); }
-        .slot-name { font-size: 11px; color: #ccc; overflow: hidden; text-overflow: ellipsis; }
+        .slot-btn { 
+            background: var(--card); border: 2px solid #333; color: white; padding: 20px; 
+            font-size: 1.5rem; font-weight: bold; cursor: pointer; border-radius: 8px; 
+            display: flex; flex-direction: column; align-items: center; transition: 0.2s;
+        }
+        .slot-btn.active { border-color: var(--live); background: #002200; box-shadow: 0 0 10px var(--live); }
+        .slot-btn span { font-size: 0.7rem; color: #aaa; margin-top: 5px; text-transform: uppercase; text-align: center; }
 
-        .edit-panel { width: 650px; background: #111; padding: 15px; border-radius: 8px; border: 1px solid #333; overflow-x: auto; }
-        .db-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-        .db-table th { text-align: left; color: var(--orange); padding: 8px; background: #222; }
-        .db-table input { background: #000; color: #fff; border: 1px solid #333; width: 90%; padding: 4px; }
+        #settingsModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 100; overflow-y: auto; }
+        .modal-content { background: #111; width: 90%; max-width: 850px; margin: 20px auto; padding: 25px; border: 1px solid var(--primary); border-radius: 10px; }
+        
+        textarea { width: 100%; height: 150px; background: #000; color: #0f0; border: 1px solid #444; padding: 10px; font-family: monospace; margin-bottom: 10px; }
+        .config-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        .config-table th { color: var(--primary); padding: 10px; text-align: left; border-bottom: 1px solid #333; }
+        .config-table input { background: #000; color: #fff; border: 1px solid #333; padding: 8px; width: 95%; border-radius: 4px; }
+        
+        .btn-group { display: flex; gap: 10px; margin-bottom: 20px; }
+        .btn-update { background: var(--primary); color: white; border: none; padding: 12px 25px; font-weight: bold; cursor: pointer; border-radius: 4px; flex: 2; }
+        .btn-reset { background: #444; color: white; border: none; padding: 12px 25px; font-weight: bold; cursor: pointer; border-radius: 4px; flex: 1; }
+        .btn-close { background: #ff0000; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 4px; font-weight: bold; float: right; }
     </style>
 </head>
 <body>
 
-    <div id="status" class="status">V25: READY - MANUAL SYNC ACTIVE</div>
-    
-    <div class="btn-group">
-        <button class="btn" style="background:var(--blue)" onclick="window.open('view.html','_blank')">OPEN VIEW PANEL</button>
-    </div>
+<div class="header">
+    <div id="status" style="color:var(--live); font-weight: bold;">● STANDBY</div>
+    <button onclick="toggleModal(true)" style="padding:10px 20px; cursor:pointer; background:#333; color:white; border:none; border-radius:5px;">⚙ SETTINGS / EDIT SLOTS</button>
+</div>
 
-    <textarea id="import-area" placeholder="Slot List Import: 1 | Team Name"></textarea>
-    <button class="btn" style="background:#333; width:650px; margin-bottom:20px;" onclick="importSlots()">UPDATE NAMES FROM LIST</button>
+<div class="grid-container" id="mainGrid"></div>
 
-    <div class="grid" id="grid"></div>
-
-    <div class="edit-panel">
-        <table class="db-table">
-            <thead><tr><th>#</th><th>TEAM NAME</th><th>LOGO (URL/TEXT)</th><th>PRESET COLOR</th></tr></thead>
-            <tbody id="dbBody"></tbody>
+<div id="settingsModal">
+    <div class="modal-content">
+        <button class="btn-close" onclick="toggleModal(false)">CLOSE & SAVE</button>
+        <h2 style="color:var(--primary)">Match Setup</h2>
+        
+        <p>Paste Slot List (Example: 17. Team Name or Slot 17 - Team Name)</p>
+        <textarea id="importArea" placeholder="Paste list from WhatsApp/Discord..."></textarea>
+        
+        <div class="btn-group">
+            <button class="btn-update" onclick="importList()">UPDATE NAMES & AUTO-COLORS</button>
+            <button class="btn-reset" onclick="resetAll()">RESET ALL</button>
+        </div>
+        
+        <table class="config-table">
+            <thead><tr><th width="50">Slot</th><th>Team Name</th><th width="100">Logo ID</th><th width="80">BG Color</th></tr></thead>
+            <tbody id="configBody"></tbody>
         </table>
     </div>
+</div>
 
 <script>
-    // GitHub Pages sync fix
-    const bc = new BroadcastChannel('bgmi_v25_sync');
-    let teamDB = JSON.parse(localStorage.getItem('bgmi_v25_db')) || {};
-    let lastActiveId = null;
+    const fbURL = "https://bgmi-overlay-default-rtdb.firebaseio.com/liveData.json";
+    let teamDB = JSON.parse(localStorage.getItem('manual_db_v5')) || {};
+    let currentId = null;
 
-    function renderAll() {
-        const grid = document.getElementById('grid');
-        const tbody = document.getElementById('dbBody');
-        grid.innerHTML = ""; tbody.innerHTML = "";
+    // Standard BGMI Slot Colors (Based on your image)
+    const slotColors = {
+        5: "#8a2be2", 8: "#e91e63", 9: "#ff9800", 10: "#9c27b0",
+        11: "#ffeb3b", 12: "#00bcd4", 13: "#607d8b", 14: "#ff5722",
+        17: "#00ffff", 18: "#ffaa00", 19: "#4caf50", 20: "#e91e63",
+        21: "#00ff7f", 22: "#2196f3", 23: "#ff5722", 24: "#4caf50"
+    };
 
-        for (let i = 1; i <= 25; i++) {
-            if(!teamDB[i]) teamDB[i] = { name: `TEAM ${i}`, logo: `${i}`, sbg: '#ff5a00' };
-            
+    function initDB() {
+        for(let i=1; i<=25; i++) {
+            if(!teamDB[i]) {
+                teamDB[i] = { 
+                    name: `Team ${i}`, 
+                    logo: `${i}`, 
+                    sbg: slotColors[i] || "#ff5a00" 
+                };
+            }
+        }
+    }
+
+    function renderUI() {
+        const grid = document.getElementById('mainGrid');
+        const table = document.getElementById('configBody');
+        grid.innerHTML = ""; table.innerHTML = "";
+        
+        for(let i=1; i<=25; i++) {
             grid.innerHTML += `
-                <div class="slot-card" id="card-${i}" onclick="sendData(${i})">
-                    <div class="slot-num">${i}</div>
-                    <div class="slot-name">${teamDB[i].name}</div>
-                </div>`;
+                <button id="slot-${i}" class="slot-btn ${currentId==i?'active':''}" onclick="sendData(${i})">
+                    ${i}
+                    <span id="label-${i}">${teamDB[i].name}</span>
+                </button>`;
             
-            tbody.innerHTML += `
+            table.innerHTML += `
                 <tr>
                     <td>${i}</td>
-                    <td><input type="text" value="${teamDB[i].name}" onchange="updateDB(${i},'name',this.value)"></td>
-                    <td><input type="text" value="${teamDB[i].logo}" onchange="updateDB(${i},'logo',this.value)"></td>
-                    <td><input type="color" value="${teamDB[i].sbg}" onchange="updateDB(${i},'sbg',this.value)"></td>
+                    <td><input type="text" value="${teamDB[i].name}" onchange="updateRow(${i},'name',this.value)"></td>
+                    <td><input type="text" value="${teamDB[i].logo}" onchange="updateRow(${i},'logo',this.value)"></td>
+                    <td><input type="color" value="${teamDB[i].sbg}" onchange="updateRow(${i},'sbg',this.value)"></td>
                 </tr>`;
         }
     }
 
-    function updateDB(id, k, val) {
-        teamDB[id][k] = val;
-        localStorage.setItem('bgmi_v25_db', JSON.stringify(teamDB));
-        renderAll();
-    }
-
-    function importSlots() {
-        const text = document.getElementById('import-area').value;
-        text.split('\n').forEach(line => {
-            const m = line.match(/(\d+)\s*[|•-]\s*(.*)/);
-            if(m) { teamDB[parseInt(m[1])].name = m[2].trim(); }
+    function importList() {
+        const lines = document.getElementById('importArea').value.split('\n');
+        lines.forEach(line => {
+            const clean = line.replace(/Slot/i, '').trim();
+            const m = clean.match(/^(\d+)[\s.\-|—–:]+(.*)/);
+            if(m) {
+                const id = parseInt(m[1]);
+                if(id >= 1 && id <= 25) {
+                    teamDB[id].name = m[2].trim();
+                    // Set color if it exists in presets
+                    if(slotColors[id]) teamDB[id].sbg = slotColors[id];
+                }
+            }
         });
-        localStorage.setItem('bgmi_v25_db', JSON.stringify(teamDB));
-        renderAll();
+        save();
+        alert("Names Updated & Colors Synced!");
     }
 
-    function sendData(id) {
-        if(lastActiveId) document.getElementById(`card-${lastActiveId}`).classList.remove('active');
-        document.getElementById(`card-${id}`).classList.add('active');
-        lastActiveId = id;
-
-        const data = {...teamDB[id], ts: Date.now()};
-        bc.postMessage(data); 
-        localStorage.setItem('bgmi_v25_last', JSON.stringify(data));
-        document.getElementById('status').innerText = "LIVE: " + teamDB[id].name;
+    function resetAll() {
+        if(confirm("Clear all team names?")) {
+            teamDB = {};
+            initDB();
+            save();
+        }
     }
 
-    renderAll();
+    function updateRow(id, k, v) { teamDB[id][k] = v; save(); }
+    function save() { localStorage.setItem('manual_db_v5', JSON.stringify(teamDB)); renderUI(); }
+    function toggleModal(s) { document.getElementById('settingsModal').style.display = s?'block':'none'; }
+    
+    async function sendData(id) {
+        currentId = id;
+        try {
+            await fetch(fbURL, { method: 'PUT', body: JSON.stringify(teamDB[id]) });
+            document.getElementById('status').innerText = "● LIVE: " + teamDB[id].name;
+            document.getElementById('status').style.color = teamDB[id].sbg;
+            renderUI();
+        } catch(e) { alert("Firebase Error!"); }
+    }
+
+    initDB();
+    renderUI();
 </script>
 </body>
 </html>
