@@ -2,40 +2,24 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>BGMI VIEW V24 - MANUAL SYNC</title>
+    <title>BGMI VIEW V25</title>
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
     <style>
         body { margin:0; background:#00ff00; overflow:hidden; font-family:'Bebas Neue'; display:flex; align-items:flex-end; height:100vh; padding: 0 0 100px 100px; }
         #container { display:flex; align-items: flex-start; }
-        
-        .logo-box { 
-            background: var(--sbg, #ff5a00); 
-            width: 140px; height: 140px; 
-            display: flex; align-items: center; justify-content: center; 
-            z-index: 10; padding: 2px; box-sizing: border-box; 
-        }
+        .logo-box { background: var(--sbg, #ff5a00); width: 140px; height: 140px; display: flex; align-items: center; justify-content: center; z-index: 10; padding: 2px; box-sizing: border-box; }
         .logo-box img { width: 100%; height: 100%; object-fit: contain; }
         .logo-box span { color: white; font-size: 90px; line-height: 1; }
-
-        .name-strip { 
-            background: var(--sbg, #ff5a00); 
-            height: 60px; /* 60px Height maintained */
-            display: flex; align-items: center; 
-            padding: 0 60px 0 30px; 
-            color: white; font-size: 42px; 
-            clip-path: polygon(0 0, 95% 0, 100% 100%, 0 100%); 
-        }
+        .name-strip { background: var(--sbg, #ff5a00); height: 60px; display: flex; align-items: center; padding: 0 60px 0 30px; color: white; font-size: 42px; clip-path: polygon(0 0, 95% 0, 100% 100%, 0 100%); margin-left: 0; border: none; }
     </style>
 </head>
 <body>
     <div id="container">
         <div class="logo-box" id="l"></div>
-        <div class="name-strip" id="n">SELECT TEAM</div>
+        <div class="name-strip" id="n">TEAM NAME</div>
     </div>
-
     <script>
-        const bc = new BroadcastChannel('bgmi_v24_sync');
-
+        const bc = new BroadcastChannel('bgmi_v25_sync');
         function updateUI(d) {
             if(!d) return;
             document.body.style.setProperty('--sbg', d.sbg);
@@ -47,15 +31,9 @@
                 l.innerHTML = `<span>${d.logo}</span>`;
             }
         }
-
-        // Catch Manual clicks from Admin
-        bc.onmessage = (ev) => {
-            updateUI(ev.data);
-        };
-
-        // Load last state on refresh
-        const saved = localStorage.getItem('bgmi_v24_last');
-        if(saved) updateUI(JSON.parse(saved));
+        bc.onmessage = (ev) => updateUI(ev.data);
+        const last = localStorage.getItem('bgmi_v25_last');
+        if(last) updateUI(JSON.parse(last));
     </script>
 </body>
 </html>
