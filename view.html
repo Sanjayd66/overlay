@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>BGMI VIEW V22</title>
+    <title>BGMI VIEW V22 - FIXED SYNC</title>
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
     <style>
         body { margin:0; background:#00ff00; overflow:hidden; font-family:'Bebas Neue'; display:flex; align-items:flex-end; height:100vh; padding: 0 0 100px 100px; }
@@ -19,19 +19,29 @@
         <div class="name-strip" id="n">TEAM NAME</div>
     </div>
     <script>
-        function update(d) {
+        // BroadcastChannel for instant GitHub Pages sync
+        const channel = new BroadcastChannel('bgmi_sync_v22');
+
+        function updateUI(d) {
             if(!d) return;
-            document.body.style.setProperty('--sbg', d.sbg);
-            document.getElementById('n').innerText = d.name.toUpperCase();
+            document.body.style.setProperty('--sbg', d.sbg || '#ff5a00');
+            document.getElementById('n').innerText = (d.name || "TEAM").toUpperCase();
             const l = document.getElementById('l');
-            if(d.logo.startsWith('http')) l.innerHTML = `<img src="${d.logo}">`;
-            else l.innerHTML = `<span>${d.logo}</span>`;
+            if(d.logo && String(d.logo).startsWith('http')) {
+                l.innerHTML = `<img src="${d.logo}">`;
+            } else {
+                l.innerHTML = `<span>${d.logo || ''}</span>`;
+            }
         }
-        window.addEventListener('storage', (e) => {
-            if (e.key === 'bgmi_v22_push') update(JSON.parse(e.newValue));
-        });
+
+        // Listen for messages from Admin
+        channel.onmessage = (event) => {
+            updateUI(event.data);
+        };
+
+        // Fallback for refresh
         const last = localStorage.getItem('bgmi_v22_push');
-        if(last) update(JSON.parse(last));
+        if(last) updateUI(JSON.parse(last));
     </script>
 </body>
 </html>
