@@ -2,12 +2,12 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>BGMI VIEW V22 - FIXED SYNC</title>
+    <title>BGMI VIEW V23 - INSTANT</title>
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
     <style>
         body { margin:0; background:#00ff00; overflow:hidden; font-family:'Bebas Neue'; display:flex; align-items:flex-end; height:100vh; padding: 0 0 100px 100px; }
         #container { display:flex; align-items: flex-start; }
-        .logo-box { background: var(--sbg, #ff5a00); width: 140px; height: 140px; display: flex; align-items: center; justify-content: center; z-index: 10; padding: 2px; box-sizing: border-box; }
+        .logo-box { background: var(--sbg, #ff5a00); width: 140px; height: 140px; display: flex; align-items: center; justify-content: center; z-index: 10; padding: 2px; box-sizing: border-box; border: none; }
         .logo-box img { width: 100%; height: 100%; object-fit: contain; }
         .logo-box span { color: white; font-size: 90px; line-height: 1; }
         .name-strip { background: var(--sbg, #ff5a00); height: 60px; display: flex; align-items: center; padding: 0 60px 0 30px; color: white; font-size: 42px; clip-path: polygon(0 0, 95% 0, 100% 100%, 0 100%); margin-left: 0; border: none; }
@@ -18,9 +18,9 @@
         <div class="logo-box" id="l"></div>
         <div class="name-strip" id="n">TEAM NAME</div>
     </div>
+
     <script>
-        // BroadcastChannel for instant GitHub Pages sync
-        const channel = new BroadcastChannel('bgmi_sync_v22');
+        const bc = new BroadcastChannel('bgmi_v23_channel');
 
         function updateUI(d) {
             if(!d) return;
@@ -34,14 +34,14 @@
             }
         }
 
-        // Listen for messages from Admin
-        channel.onmessage = (event) => {
-            updateUI(event.data);
+        // LISTEN FOR INSTANT UPDATES
+        bc.onmessage = (ev) => {
+            updateUI(ev.data);
         };
 
-        // Fallback for refresh
-        const last = localStorage.getItem('bgmi_v22_push');
-        if(last) updateUI(JSON.parse(last));
+        // LOAD LAST SAVED STATE
+        const saved = localStorage.getItem('bgmi_v23_last');
+        if(saved) updateUI(JSON.parse(saved));
     </script>
 </body>
 </html>
