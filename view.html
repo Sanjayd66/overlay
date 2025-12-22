@@ -1,26 +1,54 @@
-// View Panel Script
-const fbURL = "https://bgmi-overlay-default-rtdb.firebaseio.com/liveData.json";
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <style>
+        body { margin: 0; overflow: hidden; font-family: sans-serif; }
+        .overlay-container { width: 400px; height: 100px; display: flex; align-items: center; color: white; padding: 10px; }
+        
+        /* Team Logo Background */
+        #logoBG { width: 80px; height: 80px; display: flex; justify-content: center; align-items: center; border-radius: 5px; }
+        #teamLogo { max-width: 90%; max-height: 90%; object-fit: contain; }
+        
+        /* Team Name Display */
+        #teamName { font-size: 24px; font-weight: bold; margin-left: 20px; text-shadow: 2px 2px 4px #000; }
+    </style>
+</head>
+<body>
 
-async function updateView() {
-    try {
-        const response = await fetch(fbURL);
-        const data = await response.json();
+<div class="overlay-container">
+    <div id="logoBG">
+        <img id="teamLogo" src="" alt="">
+    </div>
+    <div id="teamName">LOADING...</div>
+</div>
 
-        if (data) {
-            // 1. Update Name
-            document.getElementById('teamName').innerText = data.name;
+<script>
+    const fbURL = "https://bgmi-overlay-default-rtdb.firebaseio.com/liveData.json";
 
-            // 2. Update Logo (Aapke logo folder ka path sahi hona chahiye)
-            // Agar aapke folder mein 1.png, 2.png hai toh:
-            document.getElementById('teamLogo').src = `logos/${data.logo}.png`;
+    async function updateView() {
+        try {
+            const response = await fetch(fbURL);
+            const data = await response.json();
 
-            // 3. Update Background Color
-            document.getElementById('logoBG').style.backgroundColor = data.sbg;
+            if (data) {
+                // 1. Team Name Update
+                document.getElementById('teamName').innerText = data.name;
+
+                // 2. Background Color Update (Admin se sbg field read karega)
+                document.getElementById('logoBG').style.backgroundColor = data.sbg;
+
+                // 3. Logo Update
+                // Agar aapki images 'logos' folder mein hain toh path check karein
+                document.getElementById('teamLogo').src = `logos/${data.logo}.png`;
+            }
+        } catch (e) {
+            console.error("Data fetch error:", e);
         }
-    } catch (e) {
-        console.error("Data fetch error:", e);
     }
-}
 
-// Har 1 second mein check karega
-setInterval(updateView, 1000);
+    // Har 1 second mein Firebase se data check karega
+    setInterval(updateView, 1000);
+</script>
+
+</body>
+</html>
