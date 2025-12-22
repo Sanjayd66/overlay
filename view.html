@@ -1,97 +1,26 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>BGMI VIEW V16 - FULL LOGO</title>
-    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
-    <style>
-        /* Green Screen Background */
-        body { 
-            margin:0; 
-            background:#00ff00; 
-            overflow:hidden; 
-            font-family:'Bebas Neue'; 
-            display:flex; 
-            align-items:flex-end; 
-            height:100vh; 
-            padding: 0 0 100px 100px; 
-        }
-        
-        /* Container */
-        #container { 
-            display:flex; 
-            align-items: flex-start; 
-        }
-        
-        /* Full Box Logo - 2px Padding Only */
-        .logo-box { 
-            background: var(--sbg); 
-            width: 140px; 
-            height: 140px; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            z-index: 10; 
-            box-sizing: border-box;
-            border: none;
-            overflow: hidden; /* Bahar na nikle logo */
-            padding: 2px; /* Sirf 2px ka gap charo taraf */
-        }
-        
-        .logo-box img { 
-            width: 100%; 
-            height: 100%; 
-            object-fit: contain; /* Pure box mein fit hoga bina kharab hue */
-        }
-        
-        .logo-box span { 
-            color: white; 
-            font-size: 90px; /* Number bhi bada dikhega */
-            line-height: 1;
-        }
+// View Panel Script
+const fbURL = "https://bgmi-overlay-default-rtdb.firebaseio.com/liveData.json";
 
-        /* Name Strip (40% height of Logo) */
-        .name-strip { 
-            background: var(--sbg); 
-            height: 65px; 
-            display: flex; 
-            align-items: center; 
-            padding: 0 60px 0 30px; 
-            color: white; 
-            font-size: 45px; 
-            clip-path: polygon(0 0, 95% 0, 100% 100%, 0 100%); 
-            margin-left: 0px; 
-            border: none;
-        }
-    </style>
-</head>
-<body>
-    <div id="container">
-        <div class="logo-box" id="l"></div>
-        <div class="name-strip" id="n"></div>
-    </div>
+async function updateView() {
+    try {
+        const response = await fetch(fbURL);
+        const data = await response.json();
 
-    <script>
-        const fbURL = "https://bgmi-overlay-default-rtdb.firebaseio.com/liveData.json";
-        
-        async function sync() {
-            try {
-                const r = await fetch(fbURL + "?v=" + Date.now());
-                const d = await r.json();
-                if(!d) return;
+        if (data) {
+            // 1. Update Name
+            document.getElementById('teamName').innerText = data.name;
 
-                document.body.style.setProperty('--sbg', d.sbg || '#ff5a00');
-                document.getElementById('n').innerText = (d.name || "TEAM").toUpperCase();
-                
-                const l = document.getElementById('l');
-                if(d.logo && d.logo.startsWith('http')) {
-                    l.innerHTML = `<img src="${d.logo}">`;
-                } else {
-                    l.innerHTML = `<span>${d.logo || ''}</span>`;
-                }
-            } catch(e) { console.log("Sync Error"); }
+            // 2. Update Logo (Aapke logo folder ka path sahi hona chahiye)
+            // Agar aapke folder mein 1.png, 2.png hai toh:
+            document.getElementById('teamLogo').src = `logos/${data.logo}.png`;
+
+            // 3. Update Background Color
+            document.getElementById('logoBG').style.backgroundColor = data.sbg;
         }
-        setInterval(sync, 500);
-    </script>
-</body>
-</html>
+    } catch (e) {
+        console.error("Data fetch error:", e);
+    }
+}
+
+// Har 1 second mein check karega
+setInterval(updateView, 1000);
