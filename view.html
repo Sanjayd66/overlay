@@ -2,178 +2,59 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>BGMI PRO CONTROL - SLOT TOGGLE</title>
+    <title>BGMI VIEW V22 - FIXED</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
     <style>
-        :root { --primary: #ff5a00; --bg: #050505; --card: #1a1a1a; --live: #00ff00; --off: #444; }
-        body { margin: 0; font-family: sans-serif; background: var(--bg); color: white; }
-        .header { display: flex; justify-content: space-between; align-items: center; padding: 15px; background: #111; border-bottom: 2px solid var(--primary); position: sticky; top: 0; z-index: 10; }
+        /* GREEN SCREEN */
+        body { margin:0; background:#00ff00; overflow:hidden; font-family:'Bebas Neue'; display:flex; align-items:flex-end; height:100vh; padding: 0 0 100px 100px; }
+        #container { display:flex; align-items: flex-start; }
         
-        /* Grid Container - Only shows ON slots */
-        .grid-container { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; padding: 15px; }
+        /* Aapka Original Design */
+        .logo-box { background: var(--sbg, #ff5a00); width: 140px; height: 140px; display: flex; align-items: center; justify-content: center; z-index: 10; padding: 2px; box-sizing: border-box; }
+        .logo-box img { width: 100%; height: 100%; object-fit: contain; }
+        .logo-box span { color: white; font-size: 90px; line-height: 1; }
         
-        .slot-btn { 
-            background: var(--card); border: 2px solid #333; color: white; padding: 20px; 
-            font-size: 1.5rem; font-weight: bold; cursor: pointer; border-radius: 8px; 
-            display: flex; flex-direction: column; align-items: center; transition: 0.2s;
-        }
-        .slot-btn.active { border-color: var(--live); background: #002200; box-shadow: 0 0 10px var(--live); }
-        .slot-btn span { font-size: 0.7rem; color: #aaa; margin-top: 5px; text-transform: uppercase; text-align: center; }
-
-        /* Settings Modal */
-        #settingsModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 100; overflow-y: auto; }
-        .modal-content { background: #111; width: 95%; max-width: 900px; margin: 20px auto; padding: 25px; border: 1px solid var(--primary); border-radius: 10px; }
-        
-        textarea { width: 100%; height: 120px; background: #000; color: #0f0; border: 1px solid #444; padding: 10px; font-family: monospace; margin-bottom: 10px; }
-        .config-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        .config-table th { color: var(--primary); padding: 10px; text-align: left; border-bottom: 1px solid #333; }
-        .config-table td { padding: 8px; border-bottom: 1px solid #222; }
-        .config-table input[type="text"] { background: #000; color: #fff; border: 1px solid #333; padding: 8px; width: 90%; border-radius: 4px; }
-        
-        /* Toggle Switch Style */
-        .switch { position: relative; display: inline-block; width: 40px; height: 20px; }
-        .switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cc0000; transition: .4s; border-radius: 20px; }
-        .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
-        input:checked + .slider { background-color: var(--live); }
-        input:checked + .slider:before { transform: translateX(20px); }
-
-        .btn-group { display: flex; gap: 10px; margin-bottom: 20px; }
-        .btn-update { background: var(--primary); color: white; border: none; padding: 12px 25px; font-weight: bold; cursor: pointer; border-radius: 4px; flex: 2; }
-        .btn-close { background: #ff0000; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 4px; font-weight: bold; float: right; }
+        .name-strip { background: var(--sbg, #ff5a00); height: 60px; display: flex; align-items: center; padding: 0 60px 0 30px; color: white; font-size: 42px; clip-path: polygon(0 0, 95% 0, 100% 100%, 0 100%); margin-left: 0; border: none; }
     </style>
 </head>
 <body>
-
-<div class="header">
-    <div id="status" style="color:var(--live); font-weight: bold;">● STANDBY</div>
-    <button onclick="toggleModal(true)" style="padding:10px 20px; cursor:pointer; background:#333; color:white; border:none; border-radius:5px;">⚙ SETTINGS / ON-OFF SLOTS</button>
-</div>
-
-<div class="grid-container" id="mainGrid"></div>
-
-<div id="settingsModal">
-    <div class="modal-content">
-        <button class="btn-close" onclick="toggleModal(false)">CLOSE & SAVE</button>
-        <h2 style="color:var(--primary)">Match Configuration</h2>
-        
-        <textarea id="importArea" placeholder="Paste Slot List here..."></textarea>
-        <div class="btn-group">
-            <button class="btn-update" onclick="importList()">UPDATE NAMES & AUTO-COLORS</button>
-        </div>
-        
-        <table class="config-table">
-            <thead>
-                <tr>
-                    <th>Show?</th>
-                    <th width="40">#</th>
-                    <th>Team Name</th>
-                    <th>Logo ID</th>
-                    <th>Color</th>
-                </tr>
-            </thead>
-            <tbody id="configBody"></tbody>
-        </table>
+    <div id="container">
+        <div class="logo-box" id="l"></div>
+        <div class="name-strip" id="n">TEAM NAME</div>
     </div>
-</div>
 
-<script>
-    const fbURL = "https://bgmi-overlay-default-rtdb.firebaseio.com/liveData.json";
-    
-    // Load data or initialize
-    let teamDB = JSON.parse(localStorage.getItem('manual_db_v6')) || {};
-    let slotStatus = JSON.parse(localStorage.getItem('slot_status_v6')) || {};
-    let currentId = null;
+    <script>
+        const fbURL = "https://bgmi-overlay-default-rtdb.firebaseio.com/liveData.json";
 
-    function initDB() {
-        for(let i=1; i<=25; i++) {
-            if(!teamDB[i]) teamDB[i] = { name: `Team ${i}`, logo: `${i}`, sbg: "#ff5a00" };
-            if(slotStatus[i] === undefined) slotStatus[i] = true; // Default all ON
-        }
-    }
-
-    function renderUI() {
-        const grid = document.getElementById('mainGrid');
-        const table = document.getElementById('configBody');
-        grid.innerHTML = ""; 
-        table.innerHTML = "";
-        
-        for(let i=1; i<=25; i++) {
-            // Main Grid Buttons (ONLY IF ON)
-            if(slotStatus[i]) {
-                grid.innerHTML += `
-                    <button id="slot-${i}" class="slot-btn ${currentId==i?'active':''}" onclick="sendData(${i})">
-                        ${i}
-                        <span>${teamDB[i].name}</span>
-                    </button>`;
-            }
+        function update(d) {
+            if(!d) return;
+            // 1. Set Background Color (CSS Variable)
+            document.body.style.setProperty('--sbg', d.sbg);
             
-            // Settings Table Rows
-            table.innerHTML += `
-                <tr>
-                    <td>
-                        <label class="switch">
-                            <input type="checkbox" ${slotStatus[i] ? 'checked' : ''} onchange="toggleSlot(${i}, this.checked)">
-                            <span class="slider"></span>
-                        </label>
-                    </td>
-                    <td style="color:var(--primary); font-weight:bold;">${i}</td>
-                    <td><input type="text" value="${teamDB[i].name}" onchange="updateRow(${i},'name',this.value)"></td>
-                    <td><input type="text" value="${teamDB[i].logo}" onchange="updateRow(${i},'logo',this.value)"></td>
-                    <td><input type="color" value="${teamDB[i].sbg}" onchange="updateRow(${i},'sbg',this.value)"></td>
-                </tr>`;
-        }
-    }
-
-    function toggleSlot(id, isChecked) {
-        slotStatus[id] = isChecked;
-        localStorage.setItem('slot_status_v6', JSON.stringify(slotStatus));
-        // We don't call renderUI here to avoid losing focus while typing, 
-        // but it will refresh when modal is closed or after updates.
-    }
-
-    function importList() {
-        const lines = document.getElementById('importArea').value.split('\n');
-        lines.forEach(line => {
-            const clean = line.replace(/Slot/i, '').trim();
-            const m = clean.match(/^(\d+)[\s.\-|—–:]+(.*)/);
-            if(m) {
-                const id = parseInt(m[1]);
-                if(id >= 1 && id <= 25) {
-                    teamDB[id].name = m[2].trim();
-                }
+            // 2. Set Team Name
+            document.getElementById('n').innerText = d.name.toUpperCase();
+            
+            // 3. Set Logo (Check if URL or ID)
+            const l = document.getElementById('l');
+            if(d.logo.toString().startsWith('http')) {
+                l.innerHTML = `<img src="${d.logo}">`;
+            } else {
+                // Agar aap logo folder use kar rahe hain toh: 
+                // l.innerHTML = `<img src="logos/${d.logo}.png">`;
+                l.innerHTML = `<span>${d.logo}</span>`;
             }
-        });
-        save();
-        alert("Names Updated!");
-    }
+        }
 
-    function updateRow(id, k, v) { 
-        teamDB[id][k] = v; 
-        save(false); // Silent save
-    }
+        async function fetchLive() {
+            try {
+                const r = await fetch(fbURL);
+                const data = await r.json();
+                update(data);
+            } catch(e) { console.log("Waiting for data..."); }
+        }
 
-    function save(refresh = true) { 
-        localStorage.setItem('manual_db_v6', JSON.stringify(teamDB)); 
-        if(refresh) renderUI(); 
-    }
-
-    function toggleModal(s) { 
-        document.getElementById('settingsModal').style.display = s?'block':'none'; 
-        if(!s) renderUI(); // Refresh grid when closing settings
-    }
-    
-    async function sendData(id) {
-        currentId = id;
-        try {
-            await fetch(fbURL, { method: 'PUT', body: JSON.stringify(teamDB[id]) });
-            document.getElementById('status').innerText = "● LIVE: " + teamDB[id].name;
-            document.getElementById('status').style.color = teamDB[id].sbg;
-            renderUI();
-        } catch(e) { alert("Firebase Error!"); }
-    }
-
-    initDB();
-    renderUI();
-</script>
+        setInterval(fetchLive, 1000);
+        fetchLive();
+    </script>
 </body>
 </html>
