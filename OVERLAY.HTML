@@ -2,35 +2,23 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>BGMI PRO CONTROL - FINAL</title>
+    <title>BGMI PRO CONTROL - OFFICIAL COLORS</title>
     <style>
         :root { --primary: #ff5a00; --bg: #050505; --card: #1a1a1a; --live: #00ff00; }
         body { margin: 0; font-family: sans-serif; background: var(--bg); color: white; }
         .header { display: flex; justify-content: space-between; align-items: center; padding: 15px; background: #111; border-bottom: 2px solid var(--primary); position: sticky; top: 0; z-index: 10; }
-        
-        /* Grid: Jo slots OFF honge woh yahan nahi dikhenge */
         .grid-container { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; padding: 15px; }
-        
-        .slot-btn { 
-            background: var(--card); border: 2px solid #333; color: white; padding: 20px; 
-            font-size: 1.5rem; font-weight: bold; cursor: pointer; border-radius: 8px; 
-            display: flex; flex-direction: column; align-items: center; 
-        }
+        .slot-btn { background: var(--card); border: 2px solid #333; color: white; padding: 20px; font-size: 1.5rem; font-weight: bold; cursor: pointer; border-radius: 8px; display: flex; flex-direction: column; align-items: center; }
         .slot-btn.active { border-color: var(--live); background: #002200; box-shadow: 0 0 10px var(--live); }
         .slot-btn span { font-size: 0.7rem; color: #aaa; margin-top: 5px; text-transform: uppercase; text-align: center; }
-
-        /* Settings Modal */
         #settingsModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 100; overflow-y: auto; }
         .modal-content { background: #111; width: 95%; max-width: 900px; margin: 20px auto; padding: 25px; border: 1px solid var(--primary); border-radius: 10px; }
-        
-        /* Toggle Switch Styling */
         .switch { position: relative; display: inline-block; width: 40px; height: 20px; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #444; transition: .4s; border-radius: 20px; }
         .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
         input:checked + .slider { background-color: var(--live); }
         input:checked + .slider:before { transform: translateX(20px); }
-
         .config-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
         .config-table th { color: var(--primary); padding: 10px; text-align: left; border-bottom: 1px solid #333; }
         .config-table td { padding: 8px; border-bottom: 1px solid #222; }
@@ -44,7 +32,7 @@
 
 <div class="header">
     <div id="status" style="color:var(--live); font-weight: bold;">● STANDBY</div>
-    <button onclick="toggleModal(true)" style="padding:10px 20px; cursor:pointer; background:#333; color:white; border:none; border-radius:5px;">⚙ SETTINGS / ON-OFF SLOTS</button>
+    <button onclick="toggleModal(true)" style="padding:10px 20px; cursor:pointer; background:#333; color:white; border:none; border-radius:5px;">⚙ SETTINGS</button>
 </div>
 
 <div class="grid-container" id="mainGrid"></div>
@@ -52,21 +40,11 @@
 <div id="settingsModal">
     <div class="modal-content">
         <button class="btn-close" onclick="toggleModal(false)">CLOSE & SAVE</button>
-        <h2 style="color:var(--primary)">Match Setup</h2>
-        
-        <textarea id="importArea" placeholder="Paste list here..."></textarea>
-        <button class="btn-update" onclick="importList()">UPDATE LIST</button>
-        
+        <h2 style="color:var(--primary)">Match Setup (Auto-Colors Active)</h2>
+        <textarea id="importArea" placeholder="Paste Slot List..."></textarea>
+        <button class="btn-update" onclick="importList()">UPDATE NAMES & APPLY PRESET COLORS</button>
         <table class="config-table">
-            <thead>
-                <tr>
-                    <th width="50">Show?</th>
-                    <th width="40">Slot</th>
-                    <th>Team Name</th>
-                    <th>Logo ID</th>
-                    <th>Color</th>
-                </tr>
-            </thead>
+            <thead><tr><th>Show?</th><th>Slot</th><th>Team Name</th><th>Logo ID</th><th>Color</th></tr></thead>
             <tbody id="configBody"></tbody>
         </table>
     </div>
@@ -75,75 +53,64 @@
 <script>
     const fbURL = "https://bgmi-overlay-default-rtdb.firebaseio.com/liveData.json";
     
-    // Database check
-    let teamDB = JSON.parse(localStorage.getItem('manual_db_v7')) || {};
-    let slotStatus = JSON.parse(localStorage.getItem('slot_status_v7')) || {};
+    // OFFICIAL BGMI COLORS FROM YOUR IMAGES
+    const bgmiColors = {
+        1: "#FFFFFF", 2: "#FFFF00", 3: "#00FFFF", 4: "#00FF00",
+        5: "#FF00FF", 6: "#FF5722", 7: "#4CAF50", 8: "#E91E63",
+        9: "#FF9800", 10: "#E91E63", 11: "#FFEB3B", 12: "#00BCD4",
+        13: "#607D8B", 14: "#FF5722", 15: "#607D8B", 16: "#E91E63",
+        17: "#00FFFF", 18: "#FF9800", 19: "#8BC34A", 20: "#E91E63",
+        21: "#00FF7F", 22: "#2196F3", 23: "#FF5722", 24: "#3F51B5", 25: "#FFFFFF"
+    };
+
+    let teamDB = JSON.parse(localStorage.getItem('manual_db_v8')) || {};
+    let slotStatus = JSON.parse(localStorage.getItem('slot_status_v8')) || {};
     let currentId = null;
 
     function initDB() {
         for(let i=1; i<=25; i++) {
-            if(!teamDB[i]) teamDB[i] = { name: `Team ${i}`, logo: `${i}`, sbg: "#ff5a00" };
-            if(slotStatus[i] === undefined) slotStatus[i] = true; // By default ON
+            if(!teamDB[i]) teamDB[i] = { name: `Team ${i}`, logo: `${i}`, sbg: bgmiColors[i] };
+            if(slotStatus[i] === undefined) slotStatus[i] = true;
         }
     }
 
     function renderUI() {
         const grid = document.getElementById('mainGrid');
         const table = document.getElementById('configBody');
-        grid.innerHTML = ""; 
-        table.innerHTML = "";
-        
+        grid.innerHTML = ""; table.innerHTML = "";
         for(let i=1; i<=25; i++) {
-            // Checkbox value check karke button dikhana
             if(slotStatus[i]) {
-                grid.innerHTML += `
-                    <button class="slot-btn ${currentId==i?'active':''}" onclick="sendData(${i})">
-                        ${i}
-                        <span>${teamDB[i].name}</span>
-                    </button>`;
+                grid.innerHTML += `<button class="slot-btn ${currentId==i?'active':''}" onclick="sendData(${i})">${i}<span>${teamDB[i].name}</span></button>`;
             }
-            
-            // Table Rows with Toggle Switch
-            table.innerHTML += `
-                <tr>
-                    <td>
-                        <label class="switch">
-                            <input type="checkbox" ${slotStatus[i] ? 'checked' : ''} onchange="toggleSlot(${i}, this.checked)">
-                            <span class="slider"></span>
-                        </label>
-                    </td>
-                    <td>${i}</td>
-                    <td><input type="text" value="${teamDB[i].name}" onchange="updateVal(${i},'name',this.value)"></td>
-                    <td><input type="text" value="${teamDB[i].logo}" onchange="updateVal(${i},'logo',this.value)"></td>
-                    <td><input type="color" value="${teamDB[i].sbg}" onchange="updateVal(${i},'sbg',this.value)"></td>
-                </tr>`;
+            table.innerHTML += `<tr>
+                <td><label class="switch"><input type="checkbox" ${slotStatus[i]?'checked':''} onchange="toggleSlot(${i},this.checked)"><span class="slider"></span></label></td>
+                <td style="color:${bgmiColors[i]}; font-weight:bold;">${i}</td>
+                <td><input type="text" value="${teamDB[i].name}" onchange="updateVal(${i},'name',this.value)"></td>
+                <td><input type="text" value="${teamDB[i].logo}" onchange="updateVal(${i},'logo',this.value)"></td>
+                <td><input type="color" value="${teamDB[i].sbg}" onchange="updateVal(${i},'sbg',this.value)"></td>
+            </tr>`;
         }
     }
 
-    function toggleSlot(id, val) {
-        slotStatus[id] = val;
-        localStorage.setItem('slot_status_v7', JSON.stringify(slotStatus));
-        // Settings close hone par grid update ho jayega
-    }
-
-    function updateVal(id, k, v) {
-        teamDB[id][k] = v;
-        localStorage.setItem('manual_db_v7', JSON.stringify(teamDB));
-    }
+    function toggleSlot(id, val) { slotStatus[id] = val; localStorage.setItem('slot_status_v8', JSON.stringify(slotStatus)); }
+    function updateVal(id, k, v) { teamDB[id][k] = v; localStorage.setItem('manual_db_v8', JSON.stringify(teamDB)); }
 
     function importList() {
-        const text = document.getElementById('importArea').value;
-        const lines = text.split('\n');
+        const lines = document.getElementById('importArea').value.split('\n');
         lines.forEach(line => {
             const clean = line.replace(/Slot/i, '').trim();
             const m = clean.match(/^(\d+)[\s.\-|—–:]+(.*)/);
             if(m) {
                 const id = parseInt(m[1]);
-                if(id >= 1 && id <= 25) teamDB[id].name = m[2].trim();
+                if(id >= 1 && id <= 25) {
+                    teamDB[id].name = m[2].trim();
+                    teamDB[id].sbg = bgmiColors[id]; // APPLY PRESET COLOR
+                }
             }
         });
-        localStorage.setItem('manual_db_v7', JSON.stringify(teamDB));
+        localStorage.setItem('manual_db_v8', JSON.stringify(teamDB));
         renderUI();
+        alert("Names Updated with Preset BGMI Colors!");
     }
 
     async function sendData(id) {
@@ -151,14 +118,12 @@
         try {
             await fetch(fbURL, { method: 'PUT', body: JSON.stringify(teamDB[id]) });
             document.getElementById('status').innerText = "● LIVE: " + teamDB[id].name;
+            document.getElementById('status').style.color = teamDB[id].sbg;
             renderUI();
         } catch(e) { alert("Error!"); }
     }
 
-    function toggleModal(s) {
-        document.getElementById('settingsModal').style.display = s ? 'block' : 'none';
-        if(!s) renderUI(); // Jab Settings close ho, tab grid update ho
-    }
+    function toggleModal(s) { document.getElementById('settingsModal').style.display = s?'block':'none'; if(!s) renderUI(); }
 
     initDB();
     renderUI();
