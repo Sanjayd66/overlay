@@ -2,116 +2,170 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>NOVA CONTROL PANEL - MANUAL MODE</title>
+    <title>BGMI MANUAL CONTROL</title>
     <style>
-        :root { --orange: #ff5a00; --blue: #0088ff; --bg: #0a0a0a; --card: #161616; }
-        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; padding: 20px; }
+        :root { --primary: #ff5a00; --bg: #050505; --card: #1a1a1a; }
+        body { margin: 0; font-family: 'Arial', sans-serif; background: var(--bg); color: white; overflow: hidden; }
         
-        /* Header & Top Bar */
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid var(--orange); padding-bottom: 10px; }
-        .status-pill { background: #0f0; color: #000; padding: 5px 15px; border-radius: 20px; font-weight: bold; font-size: 12px; }
+        /* Header */
+        .header { display: flex; justify-content: space-between; align-items: center; padding: 15px 25px; background: #111; border-bottom: 2px solid var(--primary); }
+        .live-status { color: #0f0; font-family: monospace; font-size: 1.2rem; font-weight: bold; }
 
-        /* Setup Area */
-        .setup-section { background: var(--card); padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #333; }
-        textarea { width: 100%; height: 80px; background: #000; color: #0f0; border: 1px solid #444; padding: 10px; box-sizing: border-box; font-family: monospace; }
+        /* Main Grid: Just Buttons 1-25 */
+        .grid-container { 
+            display: grid; 
+            grid-template-columns: repeat(5, 1fr); 
+            gap: 15px; 
+            padding: 25px; 
+            height: calc(100vh - 100px);
+        }
+        .slot-btn { 
+            background: var(--card); 
+            border: 2px solid #333; 
+            color: white; 
+            font-size: 2rem; 
+            font-weight: bold; 
+            cursor: pointer; 
+            border-radius: 8px;
+            transition: 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .slot-btn:hover { border-color: var(--primary); background: #222; }
+        .slot-btn:active { transform: scale(0.95); background: var(--primary); }
+        .slot-btn span { font-size: 0.8rem; color: #888; margin-top: 5px; text-transform: uppercase; }
+
+        /* Settings Modal (Popup) */
+        #settingsModal { 
+            display: none; 
+            position: fixed; 
+            top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.9); 
+            z-index: 100; 
+            overflow-y: auto; 
+        }
+        .modal-content { 
+            background: #111; 
+            width: 90%; 
+            max-width: 800px; 
+            margin: 40px auto; 
+            padding: 25px; 
+            border: 1px solid var(--primary); 
+            border-radius: 10px;
+        }
         
-        /* Grid Layout */
-        .slot-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px; }
-        .slot-card { background: var(--card); border: 1px solid #333; padding: 12px; border-radius: 6px; display: flex; align-items: center; gap: 10px; transition: 0.2s; }
-        .slot-card:hover { border-color: var(--orange); }
-        .slot-num { font-size: 24px; font-weight: bold; color: var(--orange); min-width: 35px; }
-
-        /* Inputs */
-        input[type="text"] { background: #222; border: 1px solid #444; color: white; padding: 6px; border-radius: 4px; width: 100%; }
-        input[type="color"] { width: 40px; height: 30px; border: none; background: none; cursor: pointer; }
-
-        /* Buttons */
-        .btn { cursor: pointer; border: none; border-radius: 4px; font-weight: bold; text-transform: uppercase; padding: 10px; }
-        .btn-main { background: var(--orange); color: white; width: 100%; margin-top: 10px; }
-        .btn-show { background: var(--blue); color: white; padding: 8px 15px; }
-        .btn-import { background: #333; color: white; margin-top: 5px; }
+        /* Table inside Modal */
+        .config-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .config-table th { text-align: left; color: var(--primary); padding: 10px; border-bottom: 1px solid #333; }
+        .config-table td { padding: 8px; border-bottom: 1px solid #222; }
+        
+        input { background: #000; border: 1px solid #444; color: white; padding: 8px; border-radius: 4px; width: 100%; box-sizing: border-box; }
+        .btn-close { background: red; color: white; padding: 10px 20px; border: none; cursor: pointer; float: right; font-weight: bold; }
+        .btn-settings { background: #444; color: white; padding: 10px 20px; border: none; cursor: pointer; border-radius: 5px; font-weight: bold; }
+        
+        textarea { width: 100%; height: 100px; background: #000; color: #0f0; border: 1px solid #333; padding: 10px; margin-bottom: 10px; }
     </style>
 </head>
 <body>
 
 <div class="header">
-    <h2>NOVA MANUAL CONTROL</h2>
-    <div id="live-indicator" class="status-pill">STANDBY</div>
+    <div id="status" class="live-status">STANDBY</div>
+    <button class="btn-settings" onclick="toggleModal(true)">⚙ SETTINGS / EDIT SLOTS</button>
 </div>
 
-<div class="setup-section">
-    <label>Bulk Import (Format: 1 | Team Name)</label>
-    <textarea id="import-area" placeholder="1 | Team SouL&#10;2 | Global Esports"></textarea>
-    <button class="btn btn-import" onclick="importSlots()">UPDATE ALL NAMES</button>
-</div>
+<div class="grid-container" id="mainGrid"></div>
 
-<div class="slot-grid" id="slotGrid">
+<div id="settingsModal">
+    <div class="modal-content">
+        <button class="btn-close" onclick="toggleModal(false)">CLOSE & SAVE</button>
+        <h2>Project: Logo Work (Manual)</h2>
+        
+        <p>Bulk Import (Format: 1 | Team Name)</p>
+        <textarea id="importArea" placeholder="1 | Team SouL&#10;2 | GodLike"></textarea>
+        <button class="btn-settings" style="background: var(--primary);" onclick="importList()">UPDATE LIST</button>
+
+        <table class="config-table">
+            <thead>
+                <tr>
+                    <th width="50">Slot</th>
+                    <th>Team Name</th>
+                    <th>Logo ID/URL</th>
+                    <th>Color</th>
+                </tr>
+            </thead>
+            <tbody id="configBody"></tbody>
+        </table>
     </div>
+</div>
 
 <script>
     const fbURL = "https://bgmi-overlay-default-rtdb.firebaseio.com/liveData.json";
-    let teamDB = JSON.parse(localStorage.getItem('bgmi_manual_db')) || {};
+    let teamDB = JSON.parse(localStorage.getItem('manual_db_v2')) || {};
 
-    function init() {
-        const grid = document.getElementById('slotGrid');
+    // Initialize Database
+    for(let i=1; i<=25; i++) {
+        if(!teamDB[i]) teamDB[i] = { name: `Team ${i}`, logo: `${i}`, sbg: '#ff5a00' };
+    }
+
+    function renderUI() {
+        const grid = document.getElementById('mainGrid');
+        const table = document.getElementById('configBody');
         grid.innerHTML = "";
-        
-        for (let i = 1; i <= 25; i++) {
-            if (!teamDB[i]) {
-                teamDB[i] = { name: `TEAM ${i}`, logo: `${i}`, sbg: '#ff5a00' };
-            }
+        table.innerHTML = "";
 
-            const card = document.createElement('div');
-            card.className = 'slot-card';
-            card.innerHTML = `
-                <div class="slot-num">${i}</div>
-                <div style="flex-grow: 1;">
-                    <input type="text" value="${teamDB[i].name}" onchange="updateDB(${i}, 'name', this.value)" placeholder="Team Name">
-                    <div style="display: flex; gap: 5px; margin-top: 5px;">
-                        <input type="text" value="${teamDB[i].logo}" onchange="updateDB(${i}, 'logo', this.value)" placeholder="Logo ID/URL">
-                        <input type="color" value="${teamDB[i].sbg}" onchange="updateDB(${i}, 'sbg', this.value)">
-                    </div>
-                </div>
-                <button class="btn btn-show" onclick="pushData(${i})">LIVE</button>
-            `;
-            grid.appendChild(card);
+        for(let i=1; i<=25; i++) {
+            // Main Screen Buttons
+            grid.innerHTML += `
+                <button class="slot-btn" onclick="sendToFirebase(${i})">
+                    ${i}
+                    <span id="label-${i}">${teamDB[i].name}</span>
+                </button>`;
+
+            // Settings Table Rows
+            table.innerHTML += `
+                <tr>
+                    <td>${i}</td>
+                    <td><input type="text" value="${teamDB[i].name}" onchange="updateData(${i}, 'name', this.value)"></td>
+                    <td><input type="text" value="${teamDB[i].logo}" onchange="updateData(${i}, 'logo', this.value)"></td>
+                    <td><input type="color" value="${teamDB[i].sbg}" onchange="updateData(${i}, 'sbg', this.value)"></td>
+                </tr>`;
         }
     }
 
-    function updateDB(id, key, value) {
-        teamDB[id][key] = value;
-        localStorage.setItem('bgmi_manual_db', JSON.stringify(teamDB));
+    function updateData(id, key, val) {
+        teamDB[id][key] = val;
+        localStorage.setItem('manual_db_v2', JSON.stringify(teamDB));
+        document.getElementById(`label-${id}`).innerText = teamDB[id].name;
     }
 
-    function importSlots() {
-        const lines = document.getElementById('import-area').value.split('\n');
+    function importList() {
+        const lines = document.getElementById('importArea').value.split('\n');
         lines.forEach(line => {
-            const match = line.match(/(\d+)\s*[|•-]\s*(.*)/);
-            if (match) {
-                const id = parseInt(match[1]);
-                if (teamDB[id]) teamDB[id].name = match[2].trim();
+            const m = line.match(/(\d+)\s*[|•-]\s*(.*)/);
+            if(m) {
+                const id = parseInt(m[1]);
+                if(teamDB[id]) teamDB[id].name = m[2].trim();
             }
         });
-        localStorage.setItem('bgmi_manual_db', JSON.stringify(teamDB));
-        init(); // Refresh UI
+        localStorage.setItem('manual_db_v2', JSON.stringify(teamDB));
+        renderUI();
     }
 
-    async function pushData(id) {
+    async function sendToFirebase(id) {
         try {
-            const response = await fetch(fbURL, {
-                method: 'PUT',
-                body: JSON.stringify(teamDB[id])
-            });
-            if(response.ok) {
-                document.getElementById('live-indicator').innerText = "LIVE: " + teamDB[id].name;
-                document.getElementById('live-indicator').style.background = "#0f0";
-            }
-        } catch (e) {
-            alert("Firebase Error: Check your URL");
-        }
+            await fetch(fbURL, { method: 'PUT', body: JSON.stringify(teamDB[id]) });
+            document.getElementById('status').innerText = "LIVE: " + teamDB[id].name;
+            // Visual feedback on button
+        } catch(e) { alert("Firebase Error"); }
     }
 
-    init();
+    function toggleModal(show) {
+        document.getElementById('settingsModal').style.display = show ? 'block' : 'none';
+    }
+
+    renderUI();
 </script>
 
 </body>
