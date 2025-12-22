@@ -2,93 +2,36 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>BGMI VIEW PANEL - GREEN SCREEN</title>
+    <title>BGMI VIEW V22</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
     <style>
-        /* GREEN SCREEN BACKGROUND FOR OBS */
-        body { 
-            margin: 0; 
-            padding: 0; 
-            background-color: #00ff00; /* Pure Green Screen */
-            overflow: hidden; 
-            font-family: 'Segoe UI', sans-serif;
-        }
-
-        /* Layout matches your original design style */
-        .main-container {
-            display: flex;
-            align-items: center;
-            height: 100vh;
-            padding-left: 50px;
-        }
-
-        #logoBG { 
-            width: 120px; 
-            height: 120px; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            border-radius: 8px;
-            /* Color will change via JS */
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
-        }
-
-        #teamLogo { 
-            max-width: 85%; 
-            max-height: 85%; 
-            object-fit: contain; 
-        }
-
-        #teamName { 
-            font-size: 48px; 
-            font-weight: 900; 
-            color: white; 
-            margin-left: 25px; 
-            text-transform: uppercase;
-            text-shadow: 4px 4px 10px rgba(0,0,0,0.8);
-            letter-spacing: 2px;
-        }
+        body { margin:0; background:#00ff00; overflow:hidden; font-family:'Bebas Neue'; display:flex; align-items:flex-end; height:100vh; padding: 0 0 100px 100px; }
+        #container { display:flex; align-items: flex-start; }
+        .logo-box { background: var(--sbg, #ff5a00); width: 140px; height: 140px; display: flex; align-items: center; justify-content: center; z-index: 10; padding: 2px; box-sizing: border-box; }
+        .logo-box img { width: 100%; height: 100%; object-fit: contain; }
+        .logo-box span { color: white; font-size: 90px; line-height: 1; }
+        .name-strip { background: var(--sbg, #ff5a00); height: 60px; display: flex; align-items: center; padding: 0 60px 0 30px; color: white; font-size: 42px; clip-path: polygon(0 0, 95% 0, 100% 100%, 0 100%); margin-left: 0; border: none; }
     </style>
 </head>
 <body>
-
-<div class="main-container">
-    <div id="logoBG">
-        <img id="teamLogo" src="" alt="">
+    <div id="container">
+        <div class="logo-box" id="l"></div>
+        <div class="name-strip" id="n">TEAM NAME</div>
     </div>
-    <div id="teamName">WAITING...</div>
-</div>
-
-<script>
-    const fbURL = "https://bgmi-overlay-default-rtdb.firebaseio.com/liveData.json";
-
-    async function updateView() {
-        try {
-            const response = await fetch(fbURL);
-            const data = await response.json();
-
-            if (data) {
-                // 1. Text Update
-                document.getElementById('teamName').innerText = data.name;
-
-                // 2. Logo Background Color Update (from 'sbg' field)
-                document.getElementById('logoBG').style.backgroundColor = data.sbg;
-
-                // 3. Image Source Update (Path: logos/ID.png)
-                const logoElement = document.getElementById('teamLogo');
-                const newSrc = `logos/${data.logo}.png`;
-                
-                if(logoElement.src !== newSrc) {
-                    logoElement.src = newSrc;
-                }
-            }
-        } catch (e) {
-            console.log("Waiting for data...");
+    <script>
+        function update(d) {
+            if(!d) return;
+            document.body.style.setProperty('--sbg', d.sbg);
+            document.getElementById('n').innerText = d.name.toUpperCase();
+            const l = document.getElementById('l');
+            if(d.logo.startsWith('http')) l.innerHTML = `<img src="${d.logo}">`;
+            else l.innerHTML = `<span>${d.logo}</span>`;
         }
-    }
-
-    // Fast sync for live production
-    setInterval(updateView, 1000);
-</script>
-
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'bgmi_v22_push') update(JSON.parse(e.newValue));
+        });
+        const last = localStorage.getItem('bgmi_v22_push');
+        if(last) update(JSON.parse(last));
+    </script>
 </body>
 </html>
