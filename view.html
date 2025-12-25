@@ -5,42 +5,12 @@
     <title>BGMI VIEW V22 - FIXED</title>
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
     <style>
-        body {
-          margin:0;
-          background:#00ff00;
-          overflow:hidden;
-          font-family:'Bebas Neue', sans-serif;
-          display:flex;
-          align-items:flex-end;
-          height:100vh;
-          padding: 0 0 100px 100px;
-        }
+        body { margin:0; background:#00ff00; overflow:hidden; font-family:'Bebas Neue', sans-serif; display:flex; align-items:flex-end; height:100vh; padding: 0 0 100px 100px; }
         #container { display:flex; align-items: flex-start; }
-        .logo-box {
-          background: var(--sbg, #ff5a00);
-          width: 140px;
-          height: 140px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 10;
-          padding: 2px;
-          box-sizing: border-box;
-        }
+        .logo-box { background: var(--sbg, #ff5a00); width: 140px; height: 140px; display: flex; align-items: center; justify-content: center; z-index: 10; padding: 2px; box-sizing: border-box; }
         .logo-box img { width: 100%; height: 100%; object-fit: contain; }
         .logo-box span { color: white; font-size: 90px; line-height: 1; }
-        .name-strip {
-          background: var(--sbg, #ff5a00);
-          height: 60px;
-          display: flex;
-          align-items: center;
-          padding: 0 60px 0 30px;
-          color: white;
-          font-size: 42px;
-          clip-path: polygon(0 0, 95% 0, 100% 100%, 0 100%);
-          margin-left: 0;
-          border: none;
-        }
+        .name-strip { background: var(--sbg, #ff5a00); height: 60px; display: flex; align-items: center; padding: 0 60px 0 30px; color: white; font-size: 42px; clip-path: polygon(0 0, 95% 0, 100% 100%, 0 100%); }
     </style>
 </head>
 <body>
@@ -50,38 +20,33 @@
     </div>
 
     <script>
+        const bc = new BroadcastChannel('bgmi_v29_sync');
         const fbURL = "https://bgmi-overlay-default-rtdb.firebaseio.com/liveData.json";
 
         function update(d) {
             if(!d) return;
-            if(!d.sbg) d.sbg = "#ff5a00";
-
-            document.body.style.setProperty('--sbg', d.sbg);
+            document.body.style.setProperty('--sbg', d.sbg || "#ff5a00");
             document.getElementById('n').innerText = (d.name || "TEAM").toUpperCase();
-
             const l = document.getElementById('l');
             const logo = (d.logo ?? "").toString();
             if(logo.startsWith('http')) {
                 l.innerHTML = `<img src="${logo}">`;
-            } else if (logo.length > 0) {
-                l.innerHTML = `<span>${logo}</span>`;
             } else {
-                l.innerHTML = `<span>${d.slot || ""}</span>`;
+                l.innerHTML = `<span>${logo || d.slot || ""}</span>`;
             }
         }
 
+        // 1. Instant sync from Admin
+        bc.onmessage = (ev) => update(ev.data);
+
+        // 2. Backup sync from Firebase
         async function fetchLive() {
             try {
                 const r = await fetch(fbURL);
-                if(!r.ok) return;
-                const data = await r.json();
-                update(data);
-            } catch(e) {
-                console.log("Waiting for data...");
-            }
+                if(r.ok) update(await r.json());
+            } catch(e) {}
         }
-
-        setInterval(fetchLive, 1000);
+        setInterval(fetchLive, 2000);
         fetchLive();
     </script>
 </body>
