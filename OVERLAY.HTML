@@ -2,10 +2,11 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>BGMI PRO ADMIN - SLOT FIX + AUTO</title>
+    <title>BGMI PRO ADMIN - AUTO OCR</title>
     <style>
         :root { --primary: #ff5a00; --bg: #050505; --card: #1a1a1a; --live: #00ff00; }
         body { margin: 0; font-family: sans-serif; background: var(--bg); color: white; }
+
         .header {
             display: flex;
             justify-content: space-between;
@@ -17,12 +18,14 @@
             top: 0;
             z-index: 10;
         }
+
         .grid-container {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
             gap: 10px;
             padding: 15px;
         }
+
         .slot-btn {
             background: var(--card);
             border: 2px solid #333;
@@ -37,17 +40,19 @@
             align-items: center;
             text-align: center;
         }
-        .slot-btn.active {
-            border-color: var(--live);
-            background: #002200;
-            box-shadow: 0 0 10px var(--live);
-        }
         .slot-btn span {
             font-size: 0.7rem;
             color: #aaa;
             margin-top: 5px;
             text-transform: uppercase;
         }
+        .slot-btn.active {
+            border-color: var(--live);
+            background: #002200;
+            box-shadow: 0 0 10px var(--live);
+        }
+
+        /* Settings modal */
         #settingsModal {
             display: none;
             position: fixed;
@@ -66,6 +71,22 @@
             border: 1px solid var(--primary);
             border-radius: 10px;
         }
+        .config-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        .config-table th {
+            color: var(--primary);
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #333;
+        }
+        .config-table td {
+            padding: 8px;
+            border-bottom: 1px solid #222;
+        }
+
         .switch { position: relative; display: inline-block; width: 40px; height: 20px; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider {
@@ -87,21 +108,7 @@
         }
         input:checked + .slider { background-color: var(--live); }
         input:checked + .slider:before { transform: translateX(20px); }
-        .config-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 15px;
-        }
-        .config-table th {
-            color: var(--primary);
-            padding: 10px;
-            text-align: left;
-            border-bottom: 1px solid #333;
-        }
-        .config-table td {
-            padding: 8px;
-            border-bottom: 1px solid #222;
-        }
+
         input[type="text"] {
             background: #000;
             color: #fff;
@@ -115,6 +122,7 @@
             width: 60px;
             height: 30px;
         }
+
         .btn-update, .btn-close {
             border: none;
             padding: 10px 20px;
@@ -124,6 +132,7 @@
         }
         .btn-update { background: var(--primary); color: white; margin-top: 10px; }
         .btn-close { background: #ff0000; color: white; float: right; }
+
         textarea {
             width: 100%;
             height: 100px;
@@ -135,22 +144,52 @@
             font-family: monospace;
             font-size: 12px;
         }
+
+        /* OCR bar */
+        .ocr-bar {
+            padding:10px 15px;
+            background:#111;
+            border-bottom:1px solid #333;
+            display:flex;
+            gap:15px;
+            align-items:center;
+            font-size:12px;
+        }
+        .ocr-bar button {
+            padding:6px 12px;
+            font-size:12px;
+            background:#ff5a00;
+            border:none;
+            border-radius:3px;
+            cursor:pointer;
+            color:#fff;
+        }
     </style>
+
+    <!-- Tesseract.js for in-browser OCR -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
 <body>
 
 <div class="header">
     <div id="status" style="color:var(--live); font-weight: bold;">● STANDBY</div>
+    <button onclick="toggleModal(true)"
+            style="padding:10px 20px; cursor:pointer; background:#333; color:white; border:none; border-radius:5px;">
+        ⚙ SETTINGS (ON/OFF SLOTS)
+    </button>
+</div>
+
+<!-- OCR control bar (inside admin only) -->
+<div class="ocr-bar">
     <div>
-        <!-- Simple HTTP endpoint for OCR or other controller -->
-        <span style="font-size:12px; margin-right:10px; opacity:0.8;">
-            Auto API: /auto?slot=ID
-        </span>
-        <button onclick="toggleModal(true)"
-                style="padding:10px 20px; cursor:pointer; background:#333; color:white; border:none; border-radius:5px;">
-            ⚙ SETTINGS (ON/OFF SLOTS)
-        </button>
+        <div style="color:#ff5a00; font-weight:bold;">AUTO FROM OCR (BETA)</div>
+        <div style="opacity:0.8;">
+            BGMI HUD ke left number ka cropped screenshot select karo. Digit read hoga → slot auto LIVE.
+        </div>
     </div>
+    <input type="file" id="ocrFile" accept="image/*" style="max-width:180px;">
+    <button onclick="runOCR()">RUN OCR</button>
+    <span id="ocrStatus" style="opacity:0.8;"></span>
 </div>
 
 <div class="grid-container" id="mainGrid"></div>
@@ -161,31 +200,32 @@
         <h2 style="color:var(--primary)">Match Setup</h2>
 
         <p style="font-size:12px; opacity:0.8;">
-            Paste: <code>1 - TEAM NAME</code>, <code>2.TeamX</code> etc. One per line.
+            Format: <code>1 - TEAM NAME</code>, <code>2.TeamX</code> etc. Ek line me ek slot.
         </p>
         <textarea id="importArea" placeholder="Paste Slot List..."></textarea>
         <button class="btn-update" onclick="importList()">UPDATE NAMES & COLORS</button>
 
         <table class="config-table">
             <thead>
-                <tr>
-                    <th>Show?</th>
-                    <th>Slot</th>
-                    <th>Team Name</th>
-                    <th>Logo ID/URL</th>
-                    <th>Color</th>
-                </tr>
+            <tr>
+                <th>Show?</th>
+                <th>Slot</th>
+                <th>Team Name</th>
+                <th>Logo ID/URL</th>
+                <th>Color</th>
+            </tr>
             </thead>
             <tbody id="configBody"></tbody>
         </table>
     </div>
 </div>
 
+<!-- Hidden canvas for OCR -->
+<canvas id="ocrCanvas" style="display:none;"></canvas>
+
 <script>
-    // Same endpoint as view panel
     const fbURL = "https://bgmi-overlay-default-rtdb.firebaseio.com/liveData.json";
 
-    // Official Colors Mapping
     const bgmiColors = {
         1: "#FFFFFF", 2: "#FFFF00", 3: "#00FFFF", 4: "#00FF00", 5: "#FF00FF",
         6: "#FF5722", 7: "#4CAF50", 8: "#E91E63", 9: "#FF9800", 10: "#E91E63",
@@ -200,15 +240,22 @@
 
     function init() {
         for (let i = 1; i <= 25; i++) {
-            if (!teamDB[i]) teamDB[i] = {
-                name: `Team ${i}`,
-                logo: `${i}`,
-                sbg: bgmiColors[i] || "#ffffff"
-            };
+            if (!teamDB[i]) {
+                teamDB[i] = {
+                    name: `Team ${i}`,
+                    logo: `${i}`,
+                    sbg: bgmiColors[i] || "#ffffff"
+                };
+            }
             if (slotStatus[i] === undefined) slotStatus[i] = true;
         }
         render();
-        setupAutoAPI();
+        window.autoFromOCR = function (slotId) {
+            slotId = parseInt(slotId);
+            if (!slotId || slotId < 1 || slotId > 25) return;
+            if (!slotStatus[slotId]) return;
+            sendData(slotId);
+        };
     }
 
     function render() {
@@ -218,32 +265,32 @@
         table.innerHTML = "";
 
         for (let i = 1; i <= 25; i++) {
-
-            if (slotStatus[i] === true) {
+            if (slotStatus[i]) {
                 grid.innerHTML += `
-                <button id="btn-${i}" class="slot-btn ${currentId==i?'active':''}"
+                    <button id="btn-${i}" class="slot-btn ${currentId==i?'active':''}"
                         onclick="sendData(${i})">
-                    ${i}<span>${teamDB[i].name}</span>
-                </button>`;
+                        ${i}
+                        <span>${teamDB[i].name}</span>
+                    </button>`;
             }
 
             table.innerHTML += `
-            <tr>
-                <td>
-                    <label class="switch">
-                        <input type="checkbox" ${slotStatus[i] ? 'checked' : ''}
-                               onchange="toggleSlot(${i},this.checked)">
-                        <span class="slider"></span>
-                    </label>
-                </td>
-                <td style="color:${bgmiColors[i]}; font-weight:bold;">${i}</td>
-                <td><input type="text" value="${teamDB[i].name}"
-                           onchange="updateVal(${i},'name',this.value)"></td>
-                <td><input type="text" value="${teamDB[i].logo}"
-                           onchange="updateVal(${i},'logo',this.value)"></td>
-                <td><input type="color" value="${teamDB[i].sbg}"
-                           onchange="updateVal(${i},'sbg',this.value)"></td>
-            </tr>`;
+                <tr>
+                    <td>
+                        <label class="switch">
+                            <input type="checkbox" ${slotStatus[i] ? 'checked' : ''}
+                                   onchange="toggleSlot(${i},this.checked)">
+                            <span class="slider"></span>
+                        </label>
+                    </td>
+                    <td style="color:${bgmiColors[i]}; font-weight:bold;">${i}</td>
+                    <td><input type="text" value="${teamDB[i].name}"
+                               onchange="updateVal(${i},'name',this.value)"></td>
+                    <td><input type="text" value="${teamDB[i].logo}"
+                               onchange="updateVal(${i},'logo',this.value)"></td>
+                    <td><input type="color" value="${teamDB[i].sbg}"
+                               onchange="updateVal(${i},'sbg',this.value)"></td>
+                </tr>`;
         }
     }
 
@@ -297,18 +344,54 @@
         }
     }
 
-    // For OCR / external controller:
-    // Call /auto?slot=3 in the same browser (via small local webserver or extension)
-    function setupAutoAPI() {
-        // This part is a stub: browsers cannot listen on real HTTP ports directly.
-        // Idea: if you use a local helper (Electron / extension), make it execute:
-        // window.autoFromOCR(slotId);
-        window.autoFromOCR = function(slotId) {
-            slotId = parseInt(slotId);
-            if (!slotId || slotId < 1 || slotId > 25) return;
-            if (!slotStatus[slotId]) return;
-            sendData(slotId);
+    // OCR function
+    async function runOCR() {
+        const fileInput = document.getElementById('ocrFile');
+        const statusEl = document.getElementById('ocrStatus');
+        if (!fileInput.files || !fileInput.files[0]) {
+            statusEl.textContent = "No image selected.";
+            return;
+        }
+
+        statusEl.textContent = "Reading number...";
+        const file = fileInput.files[0];
+        const img = new Image();
+
+        img.onload = async () => {
+            try {
+                const canvas = document.getElementById('ocrCanvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                ctx.drawImage(img, 0, 0);
+
+                const { data: { text } } = await Tesseract.recognize(
+                    canvas,
+                    'eng',
+                    {
+                        tessedit_char_whitelist: '0123456789'
+                    }
+                );
+
+                const raw = text.replace(/\s/g, '');
+                const slotId = parseInt(raw, 10);
+                if (!slotId || slotId < 1 || slotId > 25) {
+                    statusEl.textContent = "OCR invalid: " + (raw || '?');
+                    return;
+                }
+
+                statusEl.textContent = "Detected slot " + slotId + ", switching...";
+                window.autoFromOCR(slotId);
+            } catch (err) {
+                console.error(err);
+                statusEl.textContent = "OCR error: " + err.message;
+            }
         };
+
+        img.onerror = () => {
+            statusEl.textContent = "Image load failed.";
+        };
+        img.src = URL.createObjectURL(file);
     }
 
     init();
