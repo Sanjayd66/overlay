@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>BGMI VIEW V22 - ORIGINAL</title>
+    <title>BGMI VIEW V30</title>
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
     <style>
         body { margin:0; background:#00ff00; overflow:hidden; font-family:'Bebas Neue', sans-serif; display:flex; align-items:flex-end; height:100vh; padding: 0 0 100px 100px; }
@@ -18,34 +18,17 @@
         <div class="logo-box" id="l"></div>
         <div class="name-strip" id="n">TEAM NAME</div>
     </div>
-
     <script>
-        const bc = new BroadcastChannel('bgmi_v29_sync');
-        const fbURL = "https://bgmi-overlay-default-rtdb.firebaseio.com/liveData.json";
-
+        const bc = new BroadcastChannel('bgmi_v30_sync');
         function update(d) {
             if(!d) return;
             document.body.style.setProperty('--sbg', d.sbg || "#ff5a00");
             document.getElementById('n').innerText = (d.name || "TEAM").toUpperCase();
             const l = document.getElementById('l');
-            const logo = (d.logo ?? "").toString();
-            if(logo.startsWith('http')) {
-                l.innerHTML = `<img src="${logo}">`;
-            } else {
-                l.innerHTML = `<span>${logo || d.slot || ""}</span>`;
-            }
+            if(d.logo && d.logo.toString().startsWith('http')) l.innerHTML = `<img src="${d.logo}">`;
+            else l.innerHTML = `<span>${d.logo || d.slot || ""}</span>`;
         }
-
         bc.onmessage = (ev) => update(ev.data);
-
-        async function fetchLive() {
-            try {
-                const r = await fetch(fbURL);
-                if(r.ok) update(await r.json());
-            } catch(e) {}
-        }
-        setInterval(fetchLive, 2000);
-        fetchLive();
     </script>
 </body>
 </html>
