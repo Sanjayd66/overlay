@@ -48,7 +48,9 @@
     <button class="btn" style="background:var(--blue)" onclick="window.open('view.html','_blank')">OPEN VIEW</button>
   </div>
 
-  <textarea id="import-area" placeholder="1 | TEAM K9&#10;2 | TEAM XYZ&#10;3 | TEAM ABC"></textarea>
+  <textarea id="import-area" placeholder="1 | TEAM K9
+2 | TEAM XYZ
+3 | TEAM ABC"></textarea>
   <button class="btn" style="background:#333;width:100%;margin-bottom:10px;" onclick="importSlots()">UPDATE SLOT LIST</button>
 
   <div style="font-size:11px;margin-bottom:6px;">
@@ -74,8 +76,7 @@
   // ===== CONFIG =====
   const FIREBASE_URL = "https://bgmi-overlay-default-rtdb.firebaseio.com/liveData.json";
 
-  // Slot ke approx colors (RGB) – yahan tumhe apne screenshot se pick karke real values daalni hain.
-  // Abhi sirf example values hain.
+  // Yahan apne 25 slots ke real RGB daalo (screenshot se pick karke)
   const slotColors = {
     1:{r:  15,g:  80,b:160},
     2:{r:  20,g:150,b: 90},
@@ -271,7 +272,7 @@
       if(num>=1 && num<=25 && activeSlots[num]){
         votes[num] = (votes[num]||0)+1;
         scanCount++;
-        if(scanCount>=6){
+        if(scanCount>=6){   // yahan 6 ko 10 karke zyada stable bana sakte ho
           let best=null,bestV=-1;
           Object.keys(votes).forEach(k=>{
             if(votes[k]>bestV){bestV=votes[k];best=parseInt(k,10);}
