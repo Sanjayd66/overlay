@@ -52,6 +52,26 @@
             box-shadow: 0 0 10px var(--live);
         }
 
+        /* OCR bar */
+        .ocr-bar {
+            padding:10px 15px;
+            background:#111;
+            border-bottom:1px solid #333;
+            display:flex;
+            gap:15px;
+            align-items:center;
+            font-size:12px;
+        }
+        .ocr-bar button {
+            padding:6px 12px;
+            font-size:12px;
+            background:#ff5a00;
+            border:none;
+            border-radius:3px;
+            cursor:pointer;
+            color:#fff;
+        }
+
         /* Settings modal */
         #settingsModal {
             display: none;
@@ -144,30 +164,10 @@
             font-family: monospace;
             font-size: 12px;
         }
-
-        /* OCR bar */
-        .ocr-bar {
-            padding:10px 15px;
-            background:#111;
-            border-bottom:1px solid #333;
-            display:flex;
-            gap:15px;
-            align-items:center;
-            font-size:12px;
-        }
-        .ocr-bar button {
-            padding:6px 12px;
-            font-size:12px;
-            background:#ff5a00;
-            border:none;
-            border-radius:3px;
-            cursor:pointer;
-            color:#fff;
-        }
     </style>
 
-    <!-- Tesseract.js for in-browser OCR -->
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <!-- Tesseract.js – browser OCR library -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script> <!-- [web:9] -->
 </head>
 <body>
 
@@ -179,12 +179,12 @@
     </button>
 </div>
 
-<!-- OCR control bar (inside admin only) -->
+<!-- OCR control bar -->
 <div class="ocr-bar">
     <div>
         <div style="color:#ff5a00; font-weight:bold;">AUTO FROM OCR (BETA)</div>
         <div style="opacity:0.8;">
-            BGMI HUD ke left number ka cropped screenshot select karo. Digit read hoga → slot auto LIVE.
+            BGMI HUD ke left number ka cropped screenshot choose karo. Digit read hoga → slot auto LIVE.
         </div>
     </div>
     <input type="file" id="ocrFile" accept="image/*" style="max-width:180px;">
@@ -200,7 +200,7 @@
         <h2 style="color:var(--primary)">Match Setup</h2>
 
         <p style="font-size:12px; opacity:0.8;">
-            Format: <code>1 - TEAM NAME</code>, <code>2.TeamX</code> etc. Ek line me ek slot.
+            Format: <code>1 - TEAM NAME</code>, <code>2.TeamX</code> etc. Ek line = ek slot.
         </p>
         <textarea id="importArea" placeholder="Paste Slot List..."></textarea>
         <button class="btn-update" onclick="importList()">UPDATE NAMES & COLORS</button>
@@ -220,7 +220,7 @@
     </div>
 </div>
 
-<!-- Hidden canvas for OCR -->
+<!-- Hidden canvas for OCR processing -->
 <canvas id="ocrCanvas" style="display:none;"></canvas>
 
 <script>
@@ -250,6 +250,8 @@
             if (slotStatus[i] === undefined) slotStatus[i] = true;
         }
         render();
+
+        // expose autoFromOCR for external helper (future)
         window.autoFromOCR = function (slotId) {
             slotId = parseInt(slotId);
             if (!slotId || slotId < 1 || slotId > 25) return;
@@ -344,7 +346,7 @@
         }
     }
 
-    // OCR function
+    // Image‑based OCR (screenshot se)
     async function runOCR() {
         const fileInput = document.getElementById('ocrFile');
         const statusEl = document.getElementById('ocrStatus');
@@ -380,7 +382,7 @@
                     return;
                 }
 
-                statusEl.textContent = "Detected slot " + slotId + ", switching...";
+                statusEl.textContent = "Detected slot " + slotId + " → switching...";
                 window.autoFromOCR(slotId);
             } catch (err) {
                 console.error(err);
