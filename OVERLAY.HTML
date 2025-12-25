@@ -2,21 +2,20 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>BGMI ADMIN V29 - FINAL AUTO</title>
+    <title>BGMI PRO ADMIN - ZOOM OCR</title>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
         :root { --orange: #ff5a00; --blue: #0088ff; }
         body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #050505; color: white; display: flex; height: 100vh; overflow: hidden; }
-        #admin { width: 720px; background: #111; border-right: 2px solid var(--orange); padding: 15px; overflow-y: auto; }
-        .status { background: #000; padding: 10px; border: 1px solid #333; color: #0f0; text-align: center; margin-bottom: 10px; border-left: 5px solid #0f0; }
+        #admin { width: 750px; background: #111; border-right: 2px solid var(--orange); padding: 15px; overflow-y: auto; }
+        .status { background: #000; padding: 10px; border: 1px solid #333; color: #0f0; text-align: center; margin-bottom: 10px; border-left: 5px solid #0f0; font-weight: bold; }
         .btn-group { display: flex; gap: 10px; margin-bottom: 10px; }
         .btn { flex: 1; padding: 12px; font-weight: bold; cursor: pointer; border: none; border-radius: 4px; color: white; text-transform: uppercase; }
-        #import-area { width: 96%; height: 60px; background: #1a1a1a; color: #0f0; border: 1px solid #333; padding: 10px; font-size: 11px; margin-bottom: 10px; }
         .preview-box { position: relative; width: 100%; background: #000; border: 1px solid #444; margin-bottom: 10px; }
         #v { width: 100%; height: auto; display: block; }
         #sel-canvas { position: absolute; top:0; left:0; width:100%; height:100%; cursor: crosshair; }
         .db-table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 10px; }
-        .db-table th { background: #222; color: var(--orange); padding: 8px; text-align: left; }
+        .db-table th { background: #222; color: var(--orange); padding: 8px; text-align: left; position: sticky; top: 0; }
         .db-table input { background: #000; color: #fff; border: 1px solid #333; width: 90%; padding: 4px; }
         .manual-btn { background: var(--blue); color: white; border: none; padding: 5px; cursor: pointer; font-weight: bold; width: 100%; border-radius: 3px; }
     </style>
@@ -24,15 +23,12 @@
 <body>
 
 <div id="admin">
-    <div id="status" class="status">OCR MODE: START CAPTURE & SELECT TEAM NUMBER AREA</div>
+    <div id="status" class="status">CROP ONLY THE ORANGE 'TEAM 3' BOX</div>
     
     <div class="btn-group">
-        <button id="startBtn" class="btn" style="background:var(--orange)">START CAPTURE</button>
-        <button class="btn" style="background:var(--blue)" onclick="window.open('view.html','_blank')">VIEW PANEL</button>
+        <button id="startBtn" class="btn" style="background:var(--orange)">START SCREEN CAPTURE</button>
+        <button class="btn" style="background:var(--blue)" onclick="window.open('view.html','_blank')">OPEN VIEW PANEL</button>
     </div>
-
-    <textarea id="import-area" placeholder="Import: 1 | Team Name"></textarea>
-    <button class="btn" style="background:#333; width:100%; margin-bottom:15px;" onclick="importSlots()">UPDATE LIST</button>
 
     <div class="preview-box">
         <video id="v" autoplay playsinline muted></video>
@@ -71,58 +67,67 @@
     }
 
     function updateDB(id, k, val) { teamDB[id][k] = val; localStorage.setItem('bgmi_v29_db', JSON.stringify(teamDB)); }
-    
-    function importSlots() {
-        document.getElementById('import-area').value.split('\n').forEach(line => {
-            const m = line.match(/(\d+)\s*[|•-]\s*(.*)/);
-            if(m) teamDB[parseInt(m[1])].name = m[2].trim();
-        });
-        localStorage.setItem('bgmi_v29_db', JSON.stringify(teamDB)); render();
-    }
 
     function sendData(id) {
-        if(!teamDB[id]) return;
+        if(!teamDB[id] || id === lastSentId) return;
         const data = {...teamDB[id], slot: id, ts: Date.now()};
-        bc.postMessage(data); // Sync for GitHub Pages
-        fetch(FIREBASE_URL, {method:"PUT", body:JSON.stringify(data)}); // Firebase Backup
-        document.getElementById('status').innerText = "LIVE: " + teamDB[id].name;
+        bc.postMessage(data); 
+        fetch(FIREBASE_URL, {method:"PUT", body:JSON.stringify(data)});
+        document.getElementById('status').innerText = "LIVE: " + teamDB[id].name + " (SLOT " + id + ")";
         lastSentId = id;
     }
 
     document.getElementById('startBtn').onclick = async () => {
         const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
         v.srcObject = stream;
-        v.onloadedmetadata = () => { selC.width = v.clientWidth; selC.height = v.clientHeight; initOCR(); };
+        v.onloadedmetadata = () => { 
+            selC.width = v.clientWidth; 
+            selC.height = v.clientHeight; 
+            initOCR(); 
+        };
     };
 
     async function initOCR() {
         worker = await Tesseract.createWorker('eng');
-        await worker.setParameters({ tessedit_char_whitelist: '0123456789', tessedit_pageseg_mode: '10' });
+        await worker.setParameters({ 
+            tessedit_char_whitelist: 'Team0123456789', 
+            tessedit_pageseg_mode: '7' 
+        });
         
         setInterval(async () => {
             if(!v.srcObject || crop.w < 5) return;
+
             const c = document.createElement('canvas');
-            c.width = 100; c.height = 50;
+            // 4x Scaling for small text clarity
+            c.width = crop.w * 4; 
+            c.height = crop.h * 4;
             const ctx = c.getContext('2d');
             const sx = v.videoWidth / selC.width, sy = v.videoHeight / selC.height;
-            ctx.filter = "grayscale(1) contrast(2) invert(1)";
-            ctx.drawImage(v, crop.x*sx, crop.y*sy, crop.w*sx, crop.h*sy, 0, 0, 100, 50);
+
+            // Filters to make white text pop on orange background
+            ctx.filter = "grayscale(1) contrast(3) brightness(1.1)";
+            ctx.drawImage(v, crop.x*sx, crop.y*sy, crop.w*sx, crop.h*sy, 0, 0, c.width, c.height);
             
             const { data: { text, confidence } } = await worker.recognize(c);
-            let num = parseInt(text.trim());
-            if(confidence > 50 && num >= 1 && num <= 25) {
-                votes[num] = (votes[num] || 0) + 1; scanCount++;
-                if(scanCount >= 4) {
-                    let win = Object.keys(votes).reduce((a, b) => votes[a] > votes[b] ? a : b);
-                    if(parseInt(win) !== lastSentId) sendData(parseInt(win));
-                    votes = {}; scanCount = 0;
+            let match = text.match(/\d+/); 
+            
+            if(match && confidence > 45) {
+                let num = parseInt(match[0]);
+                if(num >= 1 && num <= 25) {
+                    votes[num] = (votes[num] || 0) + 1; 
+                    scanCount++;
+                    if(scanCount >= 3) {
+                        let win = Object.keys(votes).reduce((a, b) => votes[a] > votes[b] ? a : b);
+                        sendData(parseInt(win));
+                        votes = {}; scanCount = 0;
+                    }
                 }
             }
-        }, 500);
+        }, 400);
     }
 
     selC.onmousedown = (e) => { crop.x = e.offsetX; crop.y = e.offsetY; crop.drawing = true; votes={}; };
-    selC.onmousemove = (e) => { if(crop.drawing) { sCtx.clearRect(0,0,selC.width,selC.height); sCtx.strokeStyle = "#0f0"; sCtx.strokeRect(crop.x, crop.y, e.offsetX-crop.x, e.offsetY-crop.y); } };
+    selC.onmousemove = (e) => { if(crop.drawing) { sCtx.clearRect(0,0,selC.width,selC.height); sCtx.strokeStyle = "#0f0"; sCtx.lineWidth = 2; sCtx.strokeRect(crop.x, crop.y, e.offsetX-crop.x, e.offsetY-crop.y); } };
     selC.onmouseup = (e) => { crop.w = Math.abs(e.offsetX-crop.x); crop.h = Math.abs(e.offsetY-crop.y); crop.drawing = false; };
     render();
 </script>
