@@ -5,53 +5,16 @@
     <title>BGMI VIEW V22 - FIXED</title>
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
     <style>
-        body {
-            margin:0;
-            background:#00ff00;
-            overflow:hidden;
-            font-family:'Bebas Neue', sans-serif;
-            display:flex;
-            align-items:flex-end;
-            height:100vh;
-            padding: 0 0 100px 100px;
-        }
+        /* GREEN SCREEN */
+        body { margin:0; background:#00ff00; overflow:hidden; font-family:'Bebas Neue'; display:flex; align-items:flex-end; height:100vh; padding: 0 0 100px 100px; }
         #container { display:flex; align-items: flex-start; }
-
-        .logo-box {
-            background: var(--sbg, #ff5a00);
-            width: 140px;
-            height: 140px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 10;
-            padding: 2px;
-            box-sizing: border-box;
-        }
-        .logo-box img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-        }
-        .logo-box span {
-            color: white;
-            font-size: 90px;
-            line-height: 1;
-        }
-        .name-strip {
-            background: var(--sbg, #ff5a00);
-            height: 60px;
-            display: flex;
-            align-items: center;
-            padding: 0 60px 0 30px;
-            color: white;
-            font-size: 42px;
-            clip-path: polygon(0 0, 95% 0, 100% 100%, 0 100%);
-            margin-left: 0;
-            border: none;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
+        
+        /* Aapka Original Design */
+        .logo-box { background: var(--sbg, #ff5a00); width: 140px; height: 140px; display: flex; align-items: center; justify-content: center; z-index: 10; padding: 2px; box-sizing: border-box; }
+        .logo-box img { width: 100%; height: 100%; object-fit: contain; }
+        .logo-box span { color: white; font-size: 90px; line-height: 1; }
+        
+        .name-strip { background: var(--sbg, #ff5a00); height: 60px; display: flex; align-items: center; padding: 0 60px 0 30px; color: white; font-size: 42px; clip-path: polygon(0 0, 95% 0, 100% 100%, 0 100%); margin-left: 0; border: none; }
     </style>
 </head>
 <body>
@@ -64,17 +27,34 @@
         const fbURL = "https://bgmi-overlay-default-rtdb.firebaseio.com/liveData.json";
 
         function update(d) {
-            if (!d) return;
-
-            document.body.style.setProperty('--sbg', d.sbg || '#ff5a00');
-
-            const nameEl = document.getElementById('n');
-            nameEl.textContent = (d.name || 'TEAM NAME').toUpperCase();
-
+            if(!d) return;
+            // 1. Set Background Color (CSS Variable)
+            document.body.style.setProperty('--sbg', d.sbg);
+            
+            // 2. Set Team Name
+            document.getElementById('n').innerText = d.name.toUpperCase();
+            
+            // 3. Set Logo (Check if URL or ID)
             const l = document.getElementById('l');
-            const logoVal = d.logo ? d.logo.toString() : '';
-            if (logoVal.startsWith('http')) {
-                l.innerHTML = `<img src="${logoVal}" alt="logo">`;
-            } else if (logoVal) {
-                // Use image from logos folder if available
-                // l.innerHTML
+            if(d.logo.toString().startsWith('http')) {
+                l.innerHTML = `<img src="${d.logo}">`;
+            } else {
+                // Agar aap logo folder use kar rahe hain toh: 
+                // l.innerHTML = `<img src="logos/${d.logo}.png">`;
+                l.innerHTML = `<span>${d.logo}</span>`;
+            }
+        }
+
+        async function fetchLive() {
+            try {
+                const r = await fetch(fbURL);
+                const data = await r.json();
+                update(data);
+            } catch(e) { console.log("Waiting for data..."); }
+        }
+
+        setInterval(fetchLive, 1000);
+        fetchLive();
+    </script>
+</body>
+</html>
