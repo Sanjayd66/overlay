@@ -5,36 +5,141 @@
   <title>BGMI COLOR ADMIN</title>
   <style>
     :root { --orange:#ff5a00; --blue:#0088ff; --green:#28a745; --red:#dc3545; }
-    body{margin:0;font-family:'Segoe UI',sans-serif;background:#050505;color:#fff;display:flex;height:100vh;}
-    #admin{width:720px;background:#111;border-right:2px solid var(--orange);padding:15px;overflow-y:auto;}
-    .status{background:#000;margin-bottom:10px;padding:10px;border:1px solid #333;
-            border-left:5px solid #0f0;font-size:15px;text-align:center;}
-    .btn-group{display:flex;gap:10px;margin-bottom:10px;}
-    .btn{flex:1;padding:10px;border:none;border-radius:4px;color:#fff;font-weight:bold;
-         cursor:pointer;font-size:12px;text-transform:uppercase;}
-    #import-area{width:95%;height:60px;background:#1a1a1a;color:#0f0;border:1px solid #333;
-                 padding:6px;font-size:11px;border-radius:4px;resize:none;margin-bottom:5px;}
-    .preview-box{position:relative;width:100%;background:#000;border:1px solid #444;margin-bottom:10px;line-height:0;}
+    body{
+      margin:0;
+      font-family:'Segoe UI',sans-serif;
+      background:#050505;
+      color:#fff;
+      display:flex;
+      height:100vh;
+    }
+    #admin{
+      width:720px;
+      background:#111;
+      border-right:2px solid var(--orange);
+      padding:15px;
+      overflow-y:auto;
+    }
+    .status{
+      background:#000;
+      margin-bottom:10px;
+      padding:10px;
+      border:1px solid #333;
+      border-left:5px solid #0f0;
+      font-size:15px;
+      text-align:center;
+    }
+    .btn-group{
+      display:flex;
+      gap:10px;
+      margin-bottom:10px;
+    }
+    .btn{
+      flex:1;
+      padding:10px;
+      border:none;
+      border-radius:4px;
+      color:#fff;
+      font-weight:bold;
+      cursor:pointer;
+      font-size:12px;
+      text-transform:uppercase;
+    }
+    #import-area{
+      width:95%;
+      height:60px;
+      background:#1a1a1a;
+      color:#0f0;
+      border:1px solid #333;
+      padding:6px;
+      font-size:11px;
+      border-radius:4px;
+      resize:none;
+      margin-bottom:5px;
+    }
+    .preview-box{
+      position:relative;
+      width:100%;
+      background:#000;
+      border:1px solid #444;
+      margin-bottom:10px;
+      line-height:0;
+    }
     #v{width:100%;background:#222;}
-    #sel-canvas{position:absolute;top:0;left:0;width:100%;height:100%;cursor:crosshair;}
-    #debug-canvas{width:100%;height:90px;background:#000;border:1px solid #0f0;margin-bottom:10px;}
-    .metrics{display:flex;gap:10px;font-size:11px;margin-bottom:10px;}
-    .metric{background:#222;padding:6px 10px;border-radius:4px;}
-    .db-table{width:100%;border-collapse:collapse;font-size:11px;}
-    .db-table th{background:#222;color:var(--orange);padding:6px;text-align:left;}
+    #sel-canvas{
+      position:absolute;
+      top:0;left:0;
+      width:100%;
+      height:100%;
+      cursor:crosshair;
+    }
+    #debug-canvas{
+      width:100%;
+      height:90px;
+      background:#000;
+      border:1px solid #0f0;
+      margin-bottom:10px;
+    }
+    .metrics{
+      display:flex;
+      gap:10px;
+      font-size:11px;
+      margin-bottom:10px;
+    }
+    .metric{
+      background:#222;
+      padding:6px 10px;
+      border-radius:4px;
+    }
+    .db-table{
+      width:100%;
+      border-collapse:collapse;
+      font-size:11px;
+    }
+    .db-table th{
+      background:#222;
+      color:var(--orange);
+      padding:6px;
+      text-align:left;
+    }
     .db-table td{padding:4px;}
     .db-table tr.off{opacity:.3;}
-    .db-table input{background:#000;color:#fff;border:1px solid #333;width:90%;padding:3px;font-size:11px;}
-    .toggle-btn{cursor:pointer;padding:3px 6px;border-radius:3px;border:none;font-weight:bold;font-size:10px;}
+    .db-table input{
+      background:#000;
+      color:#fff;
+      border:1px solid #333;
+      width:90%;
+      padding:3px;
+      font-size:11px;
+    }
+    .toggle-btn{
+      cursor:pointer;
+      padding:3px 6px;
+      border-radius:3px;
+      border:none;
+      font-weight:bold;
+      font-size:10px;
+    }
     .on{background:var(--green);color:#fff;}
     .off-btn{background:#444;color:#aaa;}
-    .manual-show{background:var(--blue);color:#fff;border:none;padding:4px;border-radius:3px;
-                 cursor:pointer;font-size:10px;width:100%;font-weight:bold;}
+    .manual-show{
+      background:var(--blue);
+      color:#fff;
+      border:none;
+      padding:4px;
+      border-radius:3px;
+      cursor:pointer;
+      font-size:10px;
+      width:100%;
+      font-weight:bold;
+    }
   </style>
 </head>
 <body>
 <div id="admin">
-  <div id="status" class="status">READY: START CAPTURE, PHIR SLOT COLOR AREA CROP KARO</div>
+  <div id="status" class="status">
+    READY: START CAPTURE, PHIR SLOT COLOR AREA CROP KARO
+  </div>
 
   <div class="metrics">
     <div class="metric">Avg R: <span id="mR">0</span></div>
@@ -51,10 +156,12 @@
   <textarea id="import-area" placeholder="1 | TEAM K9
 2 | TEAM XYZ
 3 | TEAM ABC"></textarea>
-  <button class="btn" style="background:#333;width:100%;margin-bottom:10px;" onclick="importSlots()">UPDATE SLOT LIST</button>
+  <button class="btn" style="background:#333;width:100%;margin-bottom:10px;" onclick="importSlots()">
+    UPDATE SLOT LIST
+  </button>
 
   <div style="font-size:11px;margin-bottom:6px;">
-    NOTE: Crop sirf us chhote color box par rakho jahan current slot ka color dikh raha hai (number ignore karo).
+    NOTE: Crop sirf us chhote color box par rakho jahan current slot ka flat color dikh raha hai (number ignore karo).[file:11]
   </div>
 
   <div class="preview-box">
@@ -66,7 +173,9 @@
 
   <table class="db-table">
     <thead>
-      <tr><th>#</th><th>ON</th><th>SHOW</th><th>TEAM NAME</th><th>LOGO/TEXT</th><th>BG COLOR</th></tr>
+      <tr>
+        <th>#</th><th>ON</th><th>SHOW</th><th>TEAM NAME</th><th>LOGO/TEXT</th><th>BG COLOR</th>
+      </tr>
     </thead>
     <tbody id="dbBody"></tbody>
   </table>
@@ -76,14 +185,15 @@
   // ===== CONFIG =====
   const FIREBASE_URL = "https://bgmi-overlay-default-rtdb.firebaseio.com/liveData.json";
 
-  // Yahan apne 25 slots ke real RGB daalo (screenshot se pick karke)
+  // YAHAN APNE REAL RGB VALUES BHARO (slot 1–25, chart ke hisaab se)
+  // Example numbers placeholder hain, inko apne screenshot se replace karo.
   const slotColors = {
-    1:{r:  15,g:  80,b:160},
-    2:{r:  20,g:150,b: 90},
-    3:{r: 120,g: 40,b:150},
-    4:{r:  30,g:130,b:190},
+    1:{r: 15,g: 80,b:160},
+    2:{r: 20,g:150,b: 90},
+    3:{r:120,g: 40,b:150},
+    4:{r: 30,g:130,b:190},
     5:{r:200,g: 90,b: 40},
-    6:{r:  20,g:130,b:120},
+    6:{r: 20,g:130,b:120},
     7:{r:160,g:130,b: 40},
     8:{r:200,g: 60,b:140},
     9:{r: 80,g:180,b: 60},
@@ -125,21 +235,29 @@
       if(!teamDB[i]) teamDB[i]={name:`TEAM ${i}`,logo:`${i}`,sbg:'#28a745'};
       const t=teamDB[i], on=!!activeSlots[i];
       tb.innerHTML += `
-      <tr class="${on?'':'off'}">
-        <td>${i}</td>
-        <td><button class="toggle-btn ${on?'on':'off-btn'}" onclick="toggleSlot(${i})">${on?'ON':'OFF'}</button></td>
-        <td><button class="manual-show" onclick="pushSlot(${i});pushToFirebase(${i});">SHOW</button></td>
-        <td><input value="${t.name}" onchange="updateDB(${i},'name',this.value)"></td>
-        <td><input value="${t.logo}" onchange="updateDB(${i},'logo',this.value)"></td>
-        <td><input type="color" value="${t.sbg}" onchange="updateDB(${i},'sbg',this.value)"></td>
-      </tr>`;
+        <tr class="${on?'':'off'}">
+          <td>${i}</td>
+          <td><button class="toggle-btn ${on?'on':'off-btn'}" onclick="toggleSlot(${i})">${on?'ON':'OFF'}</button></td>
+          <td><button class="manual-show" onclick="pushSlot(${i});pushToFirebase(${i});">SHOW</button></td>
+          <td><input value="${t.name}" onchange="updateDB(${i},'name',this.value)"></td>
+          <td><input value="${t.logo}" onchange="updateDB(${i},'logo',this.value)"></td>
+          <td><input type="color" value="${t.sbg}" onchange="updateDB(${i},'sbg',this.value)"></td>
+        </tr>`;
     }
   }
   renderTable();
 
-  function saveDB(){ localStorage.setItem('bgmi_v23_db',JSON.stringify(teamDB)); }
-  function toggleSlot(i){ activeSlots[i]=!activeSlots[i]; renderTable(); }
-  function updateDB(i,k,v){ teamDB[i][k]=v; saveDB(); }
+  function saveDB(){
+    localStorage.setItem('bgmi_v23_db',JSON.stringify(teamDB));
+  }
+  function toggleSlot(i){
+    activeSlots[i]=!activeSlots[i];
+    renderTable();
+  }
+  function updateDB(i,k,v){
+    teamDB[i][k]=v;
+    saveDB();
+  }
 
   function importSlots(){
     const text=document.getElementById('import-area').value;
@@ -194,23 +312,26 @@
     }
   }
 
-  // Screen capture
+  // ===== SCREEN CAPTURE =====
   document.getElementById('startBtn').addEventListener('click', async ()=>{
     const btn = document.getElementById('startBtn');
-    btn.disabled=true; btn.textContent="CAPTURE...";
+    btn.disabled=true;
+    btn.textContent="CAPTURE...";
     try{
       const stream = await navigator.mediaDevices.getDisplayMedia({video:true});
       v.srcObject = stream;
       v.onloadedmetadata = ()=>{
         selC.width = v.clientWidth;
         selC.height = v.clientHeight;
-        document.getElementById('status').textContent="COLOR DETECT RUNNING – SLOT COLOR AREA CROP KARO";
+        document.getElementById('status').textContent =
+          "COLOR DETECT RUNNING – SLOT COLOR AREA CROP KARO";
         scanLoop();
         btn.textContent="RUNNING (REFRESH TO STOP)";
       };
     }catch(e){
       document.getElementById('status').textContent="SCREEN CAPTURE BLOCKED";
-      btn.disabled=false; btn.textContent="START CAPTURE";
+      btn.disabled=false;
+      btn.textContent="START CAPTURE";
     }
   });
 
@@ -218,7 +339,10 @@
     const d = img.data;
     let r=0,g=0,b=0,count=0;
     for(let i=0;i<d.length;i+=4){
-      r+=d[i]; g+=d[i+1]; b+=d[i+2]; count++;
+      r+=d[i];
+      g+=d[i+1];
+      b+=d[i+2];
+      count++;
     }
     return {r:r/count,g:g/count,b:b/count};
   }
@@ -272,33 +396,46 @@
       if(num>=1 && num<=25 && activeSlots[num]){
         votes[num] = (votes[num]||0)+1;
         scanCount++;
-        if(scanCount>=6){   // yahan 6 ko 10 karke zyada stable bana sakte ho
+
+        // 6 frames ki majority se slot lock hoga
+        if(scanCount>=6){
           let best=null,bestV=-1;
           Object.keys(votes).forEach(k=>{
-            if(votes[k]>bestV){bestV=votes[k];best=parseInt(k,10);}
+            if(votes[k]>bestV){
+              bestV=votes[k];
+              best=parseInt(k,10);
+            }
           });
           if(best && best!==lastSlot){
             pushSlot(best);
             pushToFirebase(best);
           }
-          votes={}; scanCount=0;
+          votes={};
+          scanCount=0;
         }
       }
-      if(scanCount>20){votes={};scanCount=0;}
+
+      if(scanCount>20){
+        votes={};
+        scanCount=0;
+      }
     }catch(e){
       console.error(e);
     }
     scanning = false;
   }
 
-  // crop selection
+  // ===== CROP SELECTION =====
   selC.onmousedown = e=>{
-    crop.x=e.offsetX; crop.y=e.offsetY; crop.drawing=true;
+    crop.x=e.offsetX;
+    crop.y=e.offsetY;
+    crop.drawing=true;
   };
   selC.onmousemove = e=>{
     if(!crop.drawing) return;
     sCtx.clearRect(0,0,selC.width,selC.height);
-    sCtx.strokeStyle="#0f0"; sCtx.lineWidth=2;
+    sCtx.strokeStyle="#0f0";
+    sCtx.lineWidth=2;
     sCtx.strokeRect(crop.x,crop.y,e.offsetX-crop.x,e.offsetY-crop.y);
   };
   selC.onmouseup = e=>{
@@ -307,9 +444,10 @@
     crop.drawing=false;
     sCtx.clearRect(0,0,selC.width,selC.height);
     if(crop.w>5 && crop.h>5){
-      sCtx.strokeStyle="#0f0"; sCtx.lineWidth=2;
+      sCtx.strokeStyle="#0f0";
+      sCtx.lineWidth=2;
       sCtx.strokeRect(crop.x,crop.y,crop.w,crop.h);
-      document.getElementById('status').textContent=
+      document.getElementById('status').textContent =
         `CROP OK: ${Math.round(crop.w)}x${Math.round(crop.h)} – SIRF SLOT COLOR BOX COVER KARE`;
     }
   };
