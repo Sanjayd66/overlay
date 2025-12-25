@@ -26,15 +26,15 @@
     .db-table tr.off{opacity:.3;}
     .db-table input{background:#000;color:#fff;border:1px solid #333;width:90%;padding:3px;font-size:11px;}
     .toggle-btn{cursor:pointer;padding:3px 6px;border-radius:3px;border:none;font-weight:bold;font-size:10px;}
-    .on{background:var(--green);color:#fff;}
+    .on{background:#28a745;color:#fff;}
     .off-btn{background:#444;color:#aaa;}
-    .manual-show{background:var(--blue);color:#fff;border:none;padding:4px;border-radius:3px;
+    .manual-show{background:#0088ff;color:#fff;border:none;padding:4px;border-radius:3px;
                  cursor:pointer;font-size:10px;width:100%;font-weight:bold;}
   </style>
 </head>
 <body>
 <div id="admin">
-  <div id="status" class="status">READY: START CAPTURE, PHIR SLOT COLOR BOX PAR DOT LAGAO</div>
+  <div id="status" class="status">READY: START CAPTURE, DOT ALREADY CENTER PAR PRESET HAI (0.5 SIZE)</div>
 
   <div class="metrics">
     <div class="metric">Avg R: <span id="mR">0</span></div>
@@ -44,15 +44,15 @@
   </div>
 
   <div class="btn-group">
-    <button id="startBtn" class="btn" style="background:var(--orange)">START CAPTURE</button>
-    <button class="btn" style="background:var(--blue)" onclick="window.open('view.html','_blank')">OPEN VIEW</button>
+    <button id="startBtn" class="btn" style="background:#ff5a00">START CAPTURE</button>
+    <button class="btn" style="background:#0088ff" onclick="window.open('view.html','_blank')">OPEN VIEW</button>
   </div>
 
   <textarea id="import-area" placeholder="1 | TEAM K9&#10;2 | TEAM XYZ&#10;3 | TEAM ABC"></textarea>
   <button class="btn" style="background:#333;width:100%;margin-bottom:10px;" onclick="importSlots()">UPDATE SLOT LIST</button>
 
   <div style="font-size:11px;margin-bottom:6px;">
-    NOTE: Video par jahan slot ka color block hai, wahi pe ek click karo. Dot ke aas‑paas 10×10 pixels se color read hoga.
+    NOTE: Dot radius 0.5 hai (sirf ek pixel ke aas‑paas). Default location center me set hai, tum chaho to video pe click karke shift kar sakte ho.
   </div>
 
   <div class="preview-box">
@@ -71,10 +71,9 @@
 </div>
 
 <script>
-  // ===== CONFIG =====
   const FIREBASE_URL = "https://bgmi-overlay-default-rtdb.firebaseio.com/liveData.json";
 
-  // Tumhare diye hue RGB values:
+  // Slot colors (tumhare diye hue RGB)
   const slotColors = {
     1:  {r:16,  g:68,  b:158},
     2:  {r:27,  g:94,  b:32},
@@ -109,7 +108,8 @@
   const dC = document.getElementById('debug-canvas');
   const dCtx = dC.getContext('2d');
 
-  let dot = {x:null,y:null,r:0.5};
+  // dot radius 0.5
+  let dot = {x:null, y:null, r:0.5};
   let scanning = false;
   let votes = {}, scanCount = 0, lastSlot = null;
 
@@ -202,7 +202,13 @@
       v.onloadedmetadata = ()=>{
         selC.width = v.clientWidth;
         selC.height = v.clientHeight;
-        document.getElementById('status').textContent="DOT MODE: SLOT COLOR BOX PAR CLICK KARO";
+
+        // dot ko pehle se center par set karo
+        dot.x = selC.width / 2;
+        dot.y = selC.height / 2;
+        drawDot();
+
+        document.getElementById('status').textContent="DOT MODE: CENTER PAR PRESET, AGAR CHAHO TO CLICK SE SHIFT KARO";
         scanLoop();
         btn.textContent="RUNNING (REFRESH TO STOP)";
       };
@@ -212,16 +218,22 @@
     }
   });
 
-  // dot selection
-  selC.onmousedown = e=>{
-    dot.x = e.offsetX;
-    dot.y = e.offsetY;
+  function drawDot(){
+    if(dot.x==null) return;
     sCtx.clearRect(0,0,selC.width,selC.height);
-    sCtx.strokeStyle="#0f0"; sCtx.lineWidth=2;
+    sCtx.strokeStyle="#0f0"; 
+    sCtx.lineWidth=1;        // radius chhota hai, isliye line width 1
     sCtx.beginPath();
     sCtx.arc(dot.x, dot.y, dot.r, 0, Math.PI*2);
     sCtx.stroke();
-    document.getElementById('status').textContent=`DOT SET: (${dot.x}, ${dot.y}) – yehi area ka color read hoga`;
+  }
+
+  // dot selection (manual shift)
+  selC.onmousedown = e=>{
+    dot.x = e.offsetX;
+    dot.y = e.offsetY;
+    drawDot();
+    document.getElementById('status').textContent=`DOT MOVE: (${dot.x}, ${dot.y})`;
   };
 
   function getAverageColor(img){
@@ -279,7 +291,8 @@
       const sx = v.videoWidth / selC.width;
       const sy = v.videoHeight / selC.height;
 
-      const patchW = 10, patchH = 10;
+      // dot radius 0.5, lekin processing ke liye 3x3 patch le lete hain (noise kam ho)
+      const patchW = 3, patchH = 3;
       const srcX = (dot.x - patchW/2) * sx;
       const srcY = (dot.y - patchH/2) * sy;
 
@@ -309,4 +322,3 @@
 </script>
 </body>
 </html>
-
