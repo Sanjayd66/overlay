@@ -34,7 +34,7 @@
 </head>
 <body>
 <div id="admin">
-  <div id="status" class="status">READY: START CAPTURE, PHIR COLOR DOT SET KARO</div>
+  <div id="status" class="status">READY: START CAPTURE, PHIR SLOT COLOR BOX PAR DOT LAGAO</div>
 
   <div class="metrics">
     <div class="metric">Avg R: <span id="mR">0</span></div>
@@ -52,7 +52,7 @@
   <button class="btn" style="background:#333;width:100%;margin-bottom:10px;" onclick="importSlots()">UPDATE SLOT LIST</button>
 
   <div style="font-size:11px;margin-bottom:6px;">
-    NOTE: Video pe jahan slot ka color block hai wahan ek baar click karo. Dot ke aas‑paas ke pixels se color read hoga.
+    NOTE: Video par jahan slot ka color block hai, wahi pe ek click karo. Dot ke aas‑paas 10×10 pixels se color read hoga.
   </div>
 
   <div class="preview-box">
@@ -74,33 +74,33 @@
   // ===== CONFIG =====
   const FIREBASE_URL = "https://bgmi-overlay-default-rtdb.firebaseio.com/liveData.json";
 
-  // Yahan apne screenshot se exact RGB daalo (center pixel of each slot color).
+  // Tumhare diye hue RGB values:
   const slotColors = {
-    1:{r:  15,g:  80,b:160},
-    2:{r:  20,g:150,b: 90},
-    3:{r: 120,g: 40,b:150},
-    4:{r:  30,g:130,b:190},
-    5:{r:200,g: 90,b: 40},
-    6:{r:  20,g:130,b:120},
-    7:{r:160,g:130,b: 40},
-    8:{r:200,g: 60,b:140},
-    9:{r: 80,g:180,b: 60},
-    10:{r: 20,g:110,b:190},
-    11:{r:210,g:150,b: 40},
-    12:{r: 40,g:170,b:200},
-    13:{r:120,g: 80,b:200},
-    14:{r:220,g:110,b: 60},
-    15:{r: 60,g:140,b: 90},
-    16:{r: 30,g:110,b:180},
-    17:{r:190,g:140,b: 40},
-    18:{r:170,g: 60,b:180},
-    19:{r: 40,g:160,b: 80},
-    20:{r: 20,g:120,b:200},
-    21:{r:200,g:130,b: 80},
-    22:{r: 60,g:170,b:200},
-    23:{r:130,g: 90,b:210},
-    24:{r:220,g: 80,b:120},
-    25:{r: 80,g:160,b:100}
+    1:  {r:16,  g:68,  b:158},
+    2:  {r:27,  g:94,  b:32},
+    3:  {r:198, g:40,  b:40},
+    4:  {r:230, g:81,  b:0},
+    5:  {r:106, g:27,  b:154},
+    6:  {r:46,  g:125, b:50},
+    7:  {r:173, g:20,  b:87},
+    8:  {r:0,   g:121, b:107},
+    9:  {r:121, g:85,  b:72},
+    10: {r:48,  g:63,  b:159},
+    11: {r:251, g:192, b:45},
+    12: {r:21,  g:101, b:192},
+    13: {r:56,  g:142, b:60},
+    14: {r:255, g:143, b:0},
+    15: {r:216, g:27,  b:96},
+    16: {r:123, g:31,  b:162},
+    17: {r:0,   g:137, b:123},
+    18: {r:158, g:158, b:158},
+    19: {r:85,  g:139, b:47},
+    20: {r:93,  g:64,  b:55},
+    21: {r:2,   g:119, b:189},
+    22: {r:97,  g:97,  b:97},
+    23: {r:255, g:87,  b:34},
+    24: {r:124, g:179, b:66},
+    25: {r:38,  g:50,  b:56}
   };
 
   const v = document.getElementById('v');
@@ -109,7 +109,7 @@
   const dC = document.getElementById('debug-canvas');
   const dCtx = dC.getContext('2d');
 
-  let dot = {x:null,y:null,r:1};
+  let dot = {x:null,y:null,r:6};
   let scanning = false;
   let votes = {}, scanCount = 0, lastSlot = null;
 
@@ -182,7 +182,7 @@
       ts: Date.now()
     };
     try{
-      await fetch("https://bgmi-overlay-default-rtdb.firebaseio.com/liveData.json",{
+      await fetch(FIREBASE_URL,{
         method:"PUT",
         headers:{"Content-Type":"application/json"},
         body:JSON.stringify(payload)
@@ -221,7 +221,7 @@
     sCtx.beginPath();
     sCtx.arc(dot.x, dot.y, dot.r, 0, Math.PI*2);
     sCtx.stroke();
-    document.getElementById('status').textContent=`DOT SET: (${dot.x}, ${dot.y}) – ye area ka color read hoga`;
+    document.getElementById('status').textContent=`DOT SET: (${dot.x}, ${dot.y}) – yehi area ka color read hoga`;
   };
 
   function getAverageColor(img){
@@ -309,5 +309,3 @@
 </script>
 </body>
 </html>
-
-
