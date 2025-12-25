@@ -1,324 +1,45 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>BGMI DOT COLOR ADMIN</title>
-  <style>
-    :root { --orange:#ff5a00; --blue:#0088ff; --green:#28a745; --red:#dc3545; }
-    body{margin:0;font-family:'Segoe UI',sans-serif;background:#050505;color:#fff;display:flex;height:100vh;}
-    #admin{width:720px;background:#111;border-right:2px solid var(--orange);padding:15px;overflow-y:auto;}
-    .status{background:#000;margin-bottom:10px;padding:10px;border:1px solid #333;
-            border-left:5px solid #0f0;font-size:15px;text-align:center;}
-    .btn-group{display:flex;gap:10px;margin-bottom:10px;}
-    .btn{flex:1;padding:10px;border:none;border-radius:4px;color:#fff;font-weight:bold;
-         cursor:pointer;font-size:12px;text-transform:uppercase;}
-    #import-area{width:95%;height:60px;background:#1a1a1a;color:#0f0;border:1px solid #333;
-                 padding:6px;font-size:11px;border-radius:4px;resize:none;margin-bottom:5px;}
-    .preview-box{position:relative;width:100%;background:#000;border:1px solid #444;margin-bottom:10px;line-height:0;}
-    #v{width:100%;background:#222;}
-    #sel-canvas{position:absolute;top:0;left:0;width:100%;height:100%;cursor:crosshair;}
-    #debug-canvas{width:100%;height:90px;background:#000;border:1px solid #0f0;margin-bottom:10px;}
-    .metrics{display:flex;gap:10px;font-size:11px;margin-bottom:10px;}
-    .metric{background:#222;padding:6px 10px;border-radius:4px;}
-    .db-table{width:100%;border-collapse:collapse;font-size:11px;}
-    .db-table th{background:#222;color:var(--orange);padding:6px;text-align:left;}
-    .db-table td{padding:4px;}
-    .db-table tr.off{opacity:.3;}
-    .db-table input{background:#000;color:#fff;border:1px solid #333;width:90%;padding:3px;font-size:11px;}
-    .toggle-btn{cursor:pointer;padding:3px 6px;border-radius:3px;border:none;font-weight:bold;font-size:10px;}
-    .on{background:#28a745;color:#fff;}
-    .off-btn{background:#444;color:#aaa;}
-    .manual-show{background:#0088ff;color:#fff;border:none;padding:4px;border-radius:3px;
-                 cursor:pointer;font-size:10px;width:100%;font-weight:bold;}
-  </style>
+    <meta charset="UTF-8">
+    <title>BGMI VIEW V22 - FIXED</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
+    <style>
+        body {margin:0;background:#00ff00;overflow:hidden;font-family:'Bebas Neue', sans-serif;display:flex;align-items:flex-end;height:100vh;padding: 0 0 100px 100px;}
+        #container { display:flex; align-items: flex-start; }
+        .logo-box {background: var(--sbg, #ff5a00);width: 140px;height: 140px;display: flex;align-items: center;justify-content: center;z-index: 10;padding: 2px;box-sizing: border-box;}
+        .logo-box img { width: 100%; height: 100%; object-fit: contain; }
+        .logo-box span { color: white; font-size: 90px; line-height: 1; }
+        .name-strip {background: var(--sbg, #ff5a00);height: 60px;display: flex;align-items: center;padding: 0 60px 0 30px;color: white;font-size: 42px;clip-path: polygon(0 0, 95% 0, 100% 100%, 0 100%);margin-left: 0;border: none;}
+    </style>
 </head>
 <body>
-<div id="admin">
-  <div id="status" class="status">READY: START CAPTURE, DOT ALREADY CENTER PAR PRESET HAI (0.5 SIZE)</div>
-
-  <div class="metrics">
-    <div class="metric">Avg R: <span id="mR">0</span></div>
-    <div class="metric">Avg G: <span id="mG">0</span></div>
-    <div class="metric">Avg B: <span id="mB">0</span></div>
-    <div class="metric">Slot: <span id="mWin">-</span></div>
-  </div>
-
-  <div class="btn-group">
-    <button id="startBtn" class="btn" style="background:#ff5a00">START CAPTURE</button>
-    <button class="btn" style="background:#0088ff" onclick="window.open('view.html','_blank')">OPEN VIEW</button>
-  </div>
-
-  <textarea id="import-area" placeholder="1 | TEAM K9&#10;2 | TEAM XYZ&#10;3 | TEAM ABC"></textarea>
-  <button class="btn" style="background:#333;width:100%;margin-bottom:10px;" onclick="importSlots()">UPDATE SLOT LIST</button>
-
-  <div style="font-size:11px;margin-bottom:6px;">
-    NOTE: Dot radius 0.5 hai (sirf ek pixel ke aas‑paas). Default location center me set hai, tum chaho to video pe click karke shift kar sakte ho.
-  </div>
-
-  <div class="preview-box">
-    <video id="v" autoplay playsinline muted></video>
-    <canvas id="sel-canvas"></canvas>
-  </div>
-
-  <canvas id="debug-canvas"></canvas>
-
-  <table class="db-table">
-    <thead>
-      <tr><th>#</th><th>ON</th><th>SHOW</th><th>TEAM NAME</th><th>LOGO/TEXT</th><th>BG COLOR</th></tr>
-    </thead>
-    <tbody id="dbBody"></tbody>
-  </table>
-</div>
-
-<script>
-  const FIREBASE_URL = "https://bgmi-overlay-default-rtdb.firebaseio.com/liveData.json";
-
-  // Slot colors (tumhare diye hue RGB)
-  const slotColors = {
-    1:  {r:16,  g:68,  b:158},
-    2:  {r:27,  g:94,  b:32},
-    3:  {r:198, g:40,  b:40},
-    4:  {r:230, g:81,  b:0},
-    5:  {r:106, g:27,  b:154},
-    6:  {r:46,  g:125, b:50},
-    7:  {r:173, g:20,  b:87},
-    8:  {r:0,   g:121, b:107},
-    9:  {r:121, g:85,  b:72},
-    10: {r:48,  g:63,  b:159},
-    11: {r:251, g:192, b:45},
-    12: {r:21,  g:101, b:192},
-    13: {r:56,  g:142, b:60},
-    14: {r:255, g:143, b:0},
-    15: {r:216, g:27,  b:96},
-    16: {r:123, g:31,  b:162},
-    17: {r:0,   g:137, b:123},
-    18: {r:158, g:158, b:158},
-    19: {r:85,  g:139, b:47},
-    20: {r:93,  g:64,  b:55},
-    21: {r:2,   g:119, b:189},
-    22: {r:97,  g:97,  b:97},
-    23: {r:255, g:87,  b:34},
-    24: {r:124, g:179, b:66},
-    25: {r:38,  g:50,  b:56}
-  };
-
-  const v = document.getElementById('v');
-  const selC = document.getElementById('sel-canvas');
-  const sCtx = selC.getContext('2d');
-  const dC = document.getElementById('debug-canvas');
-  const dCtx = dC.getContext('2d');
-
-  // dot radius 0.5
-  let dot = {x:null, y:null, r:0.5};
-  let scanning = false;
-  let votes = {}, scanCount = 0, lastSlot = null;
-
-  let teamDB = JSON.parse(localStorage.getItem('bgmi_v23_db') || '{}');
-  let activeSlots = Array(26).fill(true);
-
-  function renderTable(){
-    const tb = document.getElementById('dbBody');
-    tb.innerHTML = "";
-    for(let i=1;i<=25;i++){
-      if(!teamDB[i]) teamDB[i]={name:`TEAM ${i}`,logo:`${i}`,sbg:'#28a745'};
-      const t=teamDB[i], on=!!activeSlots[i];
-      tb.innerHTML += `
-      <tr class="${on?'':'off'}">
-        <td>${i}</td>
-        <td><button class="toggle-btn ${on?'on':'off-btn'}" onclick="toggleSlot(${i})">${on?'ON':'OFF'}</button></td>
-        <td><button class="manual-show" onclick="pushSlot(${i});pushToFirebase(${i});">SHOW</button></td>
-        <td><input value="${t.name}" onchange="updateDB(${i},'name',this.value)"></td>
-        <td><input value="${t.logo}" onchange="updateDB(${i},'logo',this.value)"></td>
-        <td><input type="color" value="${t.sbg}" onchange="updateDB(${i},'sbg',this.value)"></td>
-      </tr>`;
-    }
-  }
-  renderTable();
-
-  function saveDB(){ localStorage.setItem('bgmi_v23_db',JSON.stringify(teamDB)); }
-  function toggleSlot(i){ activeSlots[i]=!activeSlots[i]; renderTable(); }
-  function updateDB(i,k,v){ teamDB[i][k]=v; saveDB(); }
-
-  function importSlots(){
-    const text=document.getElementById('import-area').value;
-    text.split('\n').forEach(line=>{
-      const m=line.match(/(\d+)\s*[|•-]\s*(.+)/);
-      if(m){
-        const slot=parseInt(m[1],10);
-        if(slot>=1 && slot<=25){
-          if(!teamDB[slot]) teamDB[slot]={};
-          teamDB[slot].name=m[2].trim();
+    <div id="container">
+        <div class="logo-box" id="l"></div>
+        <div class="name-strip" id="n">TEAM NAME</div>
+    </div>
+    <script>
+        const fbURL = "https://bgmi-overlay-default-rtdb.firebaseio.com/liveData.json";
+        function update(d) {
+            if(!d) return;
+            if(!d.sbg) d.sbg = "#ff5a00";
+            document.body.style.setProperty('--sbg', d.sbg);
+            document.getElementById('n').innerText = (d.name || "TEAM").toUpperCase();
+            const l = document.getElementById('l');
+            const logo = (d.logo ?? "").toString();
+            if(logo.startsWith('http')) { l.innerHTML = `<img src="${logo}">`; }
+            else if (logo.length > 0) { l.innerHTML = `<span>${logo}</span>`; }
+            else { l.innerHTML = `<span>${d.slot || ""}</span>`; }
         }
-      }
-    });
-    saveDB();
-    renderTable();
-    document.getElementById('status').textContent="SLOT LIST UPDATED";
-  }
-
-  function pushSlot(slot){
-    const t=teamDB[slot];
-    if(!t) return;
-    lastSlot = slot;
-    localStorage.setItem('bgmi_v23_push', JSON.stringify({
-      slot,
-      name:t.name,
-      logo:t.logo,
-      sbg:t.sbg,
-      ts:Date.now()
-    }));
-    document.getElementById('status').textContent=`LIVE: ${t.name} (SLOT ${slot})`;
-    document.getElementById('mWin').textContent = slot;
-  }
-
-  async function pushToFirebase(slot){
-    const t = teamDB[slot];
-    if(!t) return;
-    const payload = {
-      slot: slot,
-      name: t.name,
-      logo: t.logo,
-      sbg: t.sbg,
-      ts: Date.now()
-    };
-    try{
-      await fetch(FIREBASE_URL,{
-        method:"PUT",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify(payload)
-      });
-    }catch(e){
-      console.log("Firebase push failed",e);
-    }
-  }
-
-  // Screen capture
-  document.getElementById('startBtn').addEventListener('click', async ()=>{
-    const btn = document.getElementById('startBtn');
-    btn.disabled=true; btn.textContent="CAPTURE...";
-    try{
-      const stream = await navigator.mediaDevices.getDisplayMedia({video:true});
-      v.srcObject = stream;
-      v.onloadedmetadata = ()=>{
-        selC.width = v.clientWidth;
-        selC.height = v.clientHeight;
-
-        // dot ko pehle se center par set karo
-        dot.x = selC.width / 2;
-        dot.y = selC.height / 2;
-        drawDot();
-
-        document.getElementById('status').textContent="DOT MODE: CENTER PAR PRESET, AGAR CHAHO TO CLICK SE SHIFT KARO";
-        scanLoop();
-        btn.textContent="RUNNING (REFRESH TO STOP)";
-      };
-    }catch(e){
-      document.getElementById('status').textContent="SCREEN CAPTURE BLOCKED";
-      btn.disabled=false; btn.textContent="START CAPTURE";
-    }
-  });
-
-  function drawDot(){
-    if(dot.x==null) return;
-    sCtx.clearRect(0,0,selC.width,selC.height);
-    sCtx.strokeStyle="#0f0"; 
-    sCtx.lineWidth=1;        // radius chhota hai, isliye line width 1
-    sCtx.beginPath();
-    sCtx.arc(dot.x, dot.y, dot.r, 0, Math.PI*2);
-    sCtx.stroke();
-  }
-
-  // dot selection (manual shift)
-  selC.onmousedown = e=>{
-    dot.x = e.offsetX;
-    dot.y = e.offsetY;
-    drawDot();
-    document.getElementById('status').textContent=`DOT MOVE: (${dot.x}, ${dot.y})`;
-  };
-
-  function getAverageColor(img){
-    const d = img.data;
-    let r=0,g=0,b=0,count=0;
-    for(let i=0;i<d.length;i+=4){
-      r+=d[i]; g+=d[i+1]; b+=d[i+2]; count++;
-    }
-    return {r:r/count,g:g/count,b:b/count};
-  }
-
-  function closestSlot(col){
-    let bestSlot=null, bestDist=1e12;
-    for(const s in slotColors){
-      const c = slotColors[s];
-      const dr = col.r - c.r;
-      const dg = col.g - c.g;
-      const db = col.b - c.b;
-      const dist = dr*dr + dg*dg + db*db;
-      if(dist < bestDist){
-        bestDist = dist;
-        bestSlot = parseInt(s,10);
-      }
-    }
-    return bestSlot;
-  }
-
-  function registerSlot(num){
-    if(!(num>=1 && num<=25 && activeSlots[num])) return;
-    votes[num] = (votes[num]||0)+1;
-    scanCount++;
-    if(scanCount>=6){
-      let best=null,bestV=-1;
-      Object.keys(votes).forEach(k=>{
-        if(votes[k]>bestV){bestV=votes[k];best=parseInt(k,10);}
-      });
-      if(best && best!==lastSlot){
-        pushSlot(best);
-        pushToFirebase(best);
-      }
-      votes={}; scanCount=0;
-    }
-    if(scanCount>20){votes={};scanCount=0;}
-  }
-
-  async function scanLoop(){
-    await scanOnce();
-    requestAnimationFrame(scanLoop);
-  }
-
-  async function scanOnce(){
-    if(!v.srcObject || dot.x==null || scanning) return;
-    scanning = true;
-    try{
-      const sx = v.videoWidth / selC.width;
-      const sy = v.videoHeight / selC.height;
-
-      // dot radius 0.5, lekin processing ke liye 3x3 patch le lete hain (noise kam ho)
-      const patchW = 3, patchH = 3;
-      const srcX = (dot.x - patchW/2) * sx;
-      const srcY = (dot.y - patchH/2) * sy;
-
-      dC.width = patchW;
-      dC.height = patchH;
-      dCtx.clearRect(0,0,dC.width,dC.height);
-      dCtx.drawImage(
-        v,
-        srcX, srcY, patchW*sx, patchH*sy,
-        0,0,dC.width,dC.height
-      );
-
-      const img = dCtx.getImageData(0,0,dC.width,dC.height);
-      const avg = getAverageColor(img);
-
-      document.getElementById('mR').textContent = Math.round(avg.r);
-      document.getElementById('mG').textContent = Math.round(avg.g);
-      document.getElementById('mB').textContent = Math.round(avg.b);
-
-      const num = closestSlot(avg);
-      registerSlot(num);
-    }catch(e){
-      console.error(e);
-    }
-    scanning = false;
-  }
-</script>
+        async function fetchLive() {
+            try {
+                const r = await fetch(fbURL);
+                if(!r.ok) return;
+                const data = await r.json();
+                update(data);
+            } catch(e) { console.log("Waiting for data..."); }
+        }
+        setInterval(fetchLive, 1000); fetchLive();
+    </script>
 </body>
 </html>
