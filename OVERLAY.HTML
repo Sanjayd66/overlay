@@ -2,152 +2,148 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>BGMI PRO ADMIN - FULL CONTROL</title>
+  <title>BGMI PRO GRID CONTROL</title>
   <style>
-    :root { --orange:#ff5a00; --blue:#0088ff; --green:#2ecc71; --red:#dc3545; --dark:#111; }
+    :root { --orange:#ff5a00; --blue:#0088ff; --green:#2ecc71; --red:#dc3545; --dark:#1a1a1a; }
     body{margin:0;font-family:'Oswald',sans-serif;background:#050505;color:#fff;overflow-x:hidden;}
     #admin{padding:20px;}
     
     .header { background:#000; border-left:5px solid var(--orange); padding:15px; font-size:20px; margin-bottom:15px; display:flex; justify-content:space-between; align-items:center; }
-    .status-msg { color: var(--green); font-weight: bold; }
     
-    .top-controls { display:flex; gap:10px; margin-bottom:15px; }
-    .btn { padding:10px 20px; border:none; border-radius:4px; color:#fff; font-weight:bold; cursor:pointer; text-transform:uppercase; font-size:12px; }
+    /* Pro Grid Layout */
+    .grid-container { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 20px; }
+    .grid-item { 
+        background: var(--dark); border: 2px solid #333; border-radius: 8px; padding: 15px 5px; 
+        text-align: center; cursor: pointer; transition: 0.2s; position: relative;
+    }
+    .grid-item:hover { border-color: var(--orange); background: #222; }
+    .grid-item.active-slot { border-color: var(--green); box-shadow: 0 0 10px var(--green); }
+    .grid-item.disabled-slot { opacity: 0.2; pointer-events: none; }
+    .grid-item h2 { margin: 0; font-size: 32px; color: #fff; }
+    .grid-item p { margin: 5px 0 0 0; font-size: 12px; color: #aaa; text-transform: uppercase; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
     
-    .db-table { width:100%; border-collapse:collapse; background: var(--dark); border-radius: 8px; }
-    .db-table th { background:#222; color:var(--orange); padding:10px; text-align:left; }
-    .db-table td { padding:8px; border-bottom:1px solid #333; }
-    .db-table input { background:#000; color:#fff; border:1px solid #444; width:90%; padding:6px; border-radius:4px; font-size:12px; }
-    
-    .manual-show { background:var(--blue); color:#fff; border:none; padding:10px; border-radius:4px; cursor:pointer; font-size:20px; width:100%; font-weight:bold; }
-    
-    /* Active/Deactive Toggle */
-    .toggle-btn { padding:5px 10px; border-radius:4px; border:none; cursor:pointer; font-weight:bold; width:80px; }
-    .active-on { background: var(--green); color:#fff; }
-    .active-off { background: #444; color:#aaa; }
-    tr.deactivated { opacity: 0.3; }
+    /* Toggle for Active/Deactive */
+    .status-dot { position: absolute; top: 5px; right: 5px; width: 10px; height: 10px; border-radius: 50%; background: var(--green); }
+    .status-dot.off { background: var(--red); }
 
-    /* Casting Mode */
-    .hide-ui { display: none !important; }
-    #showSettingsBtn { display:none; position:fixed; top:10px; right:10px; background:var(--green); z-index:1000; }
+    .btn-group { display: flex; gap: 10px; margin-bottom: 20px; }
+    .btn { padding: 10px 20px; border:none; border-radius:4px; color:#fff; font-weight:bold; cursor:pointer; text-transform:uppercase; font-size:12px; }
     
-    #import-area { width:100%; height:60px; background:#1a1a1a; color:#0f0; border:1px solid #333; padding:8px; font-size:12px; margin-bottom:10px; border-radius:4px; }
-    .metrics { background:#222; padding:12px; border-radius:8px; margin-bottom:15px; display:flex; gap:20px; font-size:14px; }
+    .settings-panel { background: #111; padding: 20px; border-radius: 8px; margin-top: 20px; border: 1px solid #333; }
+    .hide-ui { display: none !important; }
+    #showSettings { display:none; position:fixed; top:10px; right:10px; z-index:1000; background: var(--green); }
+    
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
+    th, td { padding: 8px; text-align: left; border-bottom: 1px solid #222; }
+    input { background:#000; color:#fff; border:1px solid #444; padding:5px; border-radius:4px; width: 90%; }
   </style>
 </head>
 <body>
 
-<button id="showSettingsBtn" class="btn" onclick="toggleSettings(false)">SHOW SETTINGS</button>
+<button id="showSettings" class="btn" onclick="toggleUI(false)">SHOW SETTINGS</button>
 
 <div id="admin">
   <div class="header">
-    <span>BGMI DUAL PRODUCTION: ELEMANTX x GRAVIX</span>
-    <span id="stMsg" class="status-msg">READY</span>
+    <span>PRO GRID CONTROLLER: 100% RELIABLE</span>
+    <span id="liveStatus" style="color:var(--green); font-size: 14px;">READY</span>
   </div>
 
-  <div class="metrics">
-    <div>SENT SLOT: <span id="mWin" style="color:var(--blue)">-</span></div>
-    <div>BUFFER: <span id="key-buffer" style="color:var(--orange)">NONE</span></div>
+  <div class="grid-container" id="controlGrid"></div>
+
+  <div class="btn-group settings-area">
+    <button class="btn" style="background:var(--blue)" onclick="window.open('view.html','_blank')">OPEN OVERLAY</button>
+    <button class="btn" style="background:var(--red)" onclick="toggleUI(true)">CAST MODE (HIDE SETTINGS)</button>
   </div>
 
-  <div class="settings-area">
-    <textarea id="import-area" placeholder="Format: 1 | TEAM NAME (Naye teams yahan paste karein)"></textarea>
-    <div class="top-controls">
-        <button class="btn" style="background:#333" onclick="importSlots()">IMPORT LIST</button>
-        <button class="btn" style="background:var(--blue)" onclick="window.open('view.html','_blank')">OPEN OVERLAY</button>
-        <button class="btn" style="background:var(--red)" onclick="toggleSettings(true)">START CASTING (HIDE SETTINGS)</button>
-    </div>
+  <div class="settings-panel settings-area">
+    <h3 style="margin-top:0; color:var(--orange)">TEAM DATABASE & LOGO SETUP</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>SLOT</th>
+          <th>ACTIVE</th>
+          <th>TEAM NAME</th>
+          <th>LOGO (URL/TEXT)</th>
+        </tr>
+      </thead>
+      <tbody id="configTable"></tbody>
+    </table>
   </div>
-
-  <table class="db-table">
-    <thead>
-      <tr>
-        <th>SLOT</th>
-        <th>STATUS</th>
-        <th>SEND</th>
-        <th class="settings-area">TEAM NAME</th>
-        <th class="settings-area">LOGO (URL/TEXT)</th>
-        <th class="settings-area">BG COLOR</th>
-      </tr>
-    </thead>
-    <tbody id="dbBody"></tbody>
-  </table>
 </div>
 
 <script>
   const FIREBASE_URL = "https://bgmi-overlay-default-rtdb.firebaseio.com/liveData.json";
   let teamDB = JSON.parse(localStorage.getItem('bgmi_v23_db') || '{}');
-  let activeSlots = JSON.parse(localStorage.getItem('bgmi_active_map') || '[]');
-  if(activeSlots.length === 0) activeSlots = Array(26).fill(true);
+  let activeMap = JSON.parse(localStorage.getItem('bgmi_active_map') || '[]');
+  if(activeMap.length === 0) activeMap = Array(26).fill(true);
 
-  let inputBuffer = "";
-  let bufferTimeout = null;
+  let buffer = "";
+  let timeout = null;
 
-  function renderTable(){
-    const tb = document.getElementById('dbBody');
-    tb.innerHTML = "";
-    for(let i=1;i<=25;i++){
-      if(!teamDB[i]) teamDB[i]={name:`TEAM ${i}`,logo:`${i}`,sbg:(i==4||i==13?'#2ecc71':'#ff4500')};
+  function init() {
+    const grid = document.getElementById('controlGrid');
+    const table = document.getElementById('configTable');
+    grid.innerHTML = "";
+    table.innerHTML = "";
+
+    for(let i=1; i<=25; i++) {
+      if(!teamDB[i]) teamDB[i] = { name: `TEAM ${i}`, logo: `${i}`, sbg: (i==4||i==13?'#2ecc71':'#ff4500') };
       const t = teamDB[i];
-      const on = activeSlots[i];
-      
-      tb.innerHTML += `
-        <tr id="row-${i}" class="${on ? '' : 'deactivated'}">
-          <td style="font-size:18px; font-weight:bold; color:var(--orange)">${i}</td>
-          <td><button class="toggle-btn ${on?'active-on':'active-off'}" onclick="toggleActive(${i})">${on?'ACTIVE':'OFF'}</button></td>
-          <td><button class="manual-show" onclick="sendSlot(${i})">${i}</button></td>
-          <td class="settings-area"><input value="${t.name}" onchange="updateDB(${i},'name',this.value)"></td>
-          <td class="settings-area"><input value="${t.logo}" onchange="updateDB(${i},'logo',this.value)"></td>
-          <td class="settings-area"><input type="color" value="${t.sbg}" onchange="updateDB(${i},'sbg',this.value)"></td>
+      const on = activeMap[i];
+
+      // Build Grid
+      grid.innerHTML += `
+        <div class="grid-item ${on ? '' : 'disabled-slot'}" id="slot-${i}" onclick="sendData(${i})">
+            <div class="status-dot ${on ? '' : 'off'}"></div>
+            <h2>${i}</h2>
+            <p>${t.name}</p>
+        </div>`;
+
+      // Build Config Table
+      table.innerHTML += `
+        <tr>
+          <td><b>${i}</b></td>
+          <td><input type="checkbox" ${on ? 'checked' : ''} onchange="toggleSlot(${i}, this.checked)" style="width:20px;"></td>
+          <td><input value="${t.name}" onchange="update(${i}, 'name', this.value)"></td>
+          <td><input value="${t.logo}" onchange="update(${i}, 'logo', this.value)"></td>
         </tr>`;
     }
   }
 
-  function toggleActive(i){ activeSlots[i] = !activeSlots[i]; localStorage.setItem('bgmi_active_map', JSON.stringify(activeSlots)); renderTable(); }
-  function updateDB(i,k,v){ teamDB[i][k]=v; localStorage.setItem('bgmi_v23_db',JSON.stringify(teamDB)); }
+  function toggleSlot(i, val) { activeMap[i] = val; localStorage.setItem('bgmi_active_map', JSON.stringify(activeMap)); init(); }
+  function update(i, k, v) { teamDB[i][k] = v; localStorage.setItem('bgmi_v23_db', JSON.stringify(teamDB)); init(); }
 
-  function importSlots(){
-    const text=document.getElementById('import-area').value;
-    text.split('\n').forEach(line=>{
-      const m=line.match(/(\d+)\s*[|•-]\s*(.+)/);
-      if(m){
-        const slot = parseInt(m[1]);
-        if(slot>=1 && slot<=25) teamDB[slot].name = m[2].trim();
-      }
-    });
-    localStorage.setItem('bgmi_v23_db',JSON.stringify(teamDB)); renderTable();
-  }
-
-  function toggleSettings(hide){
+  function toggleUI(hide) {
     document.querySelectorAll('.settings-area').forEach(el => el.classList.toggle('hide-ui', hide));
-    document.getElementById('showSettingsBtn').style.display = hide ? 'block' : 'none';
+    document.getElementById('showSettings').style.display = hide ? 'block' : 'none';
   }
 
-  function sendSlot(slot){
-    if(!activeSlots[slot]) return;
+  function sendData(slot) {
+    if(!activeMap[slot]) return;
+    document.querySelectorAll('.grid-item').forEach(el => el.classList.remove('active-slot'));
+    document.getElementById(`slot-${slot}`).classList.add('active-slot');
+    
     const t = teamDB[slot];
     const payload = {slot, name:t.name, logo:t.logo, sbg:t.sbg, ts:Date.now()};
     localStorage.setItem('bgmi_v23_push', JSON.stringify(payload));
-    fetch(FIREBASE_URL,{method:"PUT",body:JSON.stringify(payload)});
-    document.getElementById('mWin').textContent = slot;
-    document.getElementById('stMsg').textContent = `✅ LIVE: ${t.name}`;
+    fetch(FIREBASE_URL, {method:"PUT", body:JSON.stringify(payload)});
+    document.getElementById('liveStatus').textContent = `LIVE: ${t.name}`;
   }
 
   window.addEventListener('keydown', (e) => {
-    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    if (e.target.tagName === 'INPUT') return;
     if (e.key >= '0' && e.key <= '9') {
-      clearTimeout(bufferTimeout);
-      inputBuffer += e.key;
-      document.getElementById('key-buffer').textContent = inputBuffer;
-      bufferTimeout = setTimeout(() => {
-        const slot = parseInt(inputBuffer);
-        if (slot >= 1 && slot <= 25 && activeSlots[slot]) sendSlot(slot);
-        inputBuffer = ""; document.getElementById('key-buffer').textContent = "NONE";
+      clearTimeout(timeout);
+      buffer += e.key;
+      timeout = setTimeout(() => {
+        const slot = parseInt(buffer);
+        if (slot >= 1 && slot <= 25 && activeMap[slot]) sendData(slot);
+        buffer = "";
       }, 500); 
     }
   });
 
-  renderTable();
+  init();
 </script>
 </body>
 </html>
