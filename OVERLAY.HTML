@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>BGMI PRO GRID - BULK & COLOR FIXED</title>
+  <title>BGMI PRO GRID - PERMANENT COLORS</title>
   <style>
     :root { --orange:#ff5a00; --blue:#0088ff; --green:#2ecc71; --red:#dc3545; --dark:#1a1a1a; }
     body{margin:0;font-family:'Oswald',sans-serif;background:#050505;color:#fff;overflow-x:hidden;}
@@ -17,18 +17,14 @@
         text-align: center; cursor: pointer; transition: 0.2s; position: relative;
     }
     .grid-item:hover { border-color: var(--orange); background: #222; }
-    .grid-item.active-slot { border-color: var(--green); box-shadow: 0 0 10px var(--green); }
+    .grid-item.active-slot { border-color: white; box-shadow: 0 0 15px rgba(255,255,255,0.5); }
     .grid-item.disabled-slot { opacity: 0.2; pointer-events: none; }
     .grid-item h2 { margin: 0; font-size: 32px; color: #fff; }
     .grid-item p { margin: 5px 0 0 0; font-size: 12px; color: #aaa; text-transform: uppercase; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-    
-    .status-dot { position: absolute; top: 5px; right: 5px; width: 10px; height: 10px; border-radius: 50%; background: var(--green); }
-    .status-dot.off { background: var(--red); }
 
     .btn-group { display: flex; gap: 10px; margin-bottom: 20px; }
     .btn { padding: 10px 20px; border:none; border-radius:4px; color:#fff; font-weight:bold; cursor:pointer; text-transform:uppercase; font-size:12px; }
     
-    /* Bulk Area */
     #import-area { width:100%; height:80px; background:#111; color:#0f0; border:1px solid #444; padding:10px; font-size:12px; margin-bottom:10px; border-radius:4px; box-sizing: border-box; }
     
     .settings-panel { background: #111; padding: 20px; border-radius: 8px; margin-top: 20px; border: 1px solid #333; }
@@ -46,32 +42,31 @@
 
 <div id="admin">
   <div class="header">
-    <span>PRO GRID DASHBOARD</span>
+    <span>PERMANENT COLOR DASHBOARD</span>
     <span id="liveStatus" style="color:var(--green); font-size: 14px;">SYSTEM READY</span>
   </div>
 
   <div class="grid-container" id="controlGrid"></div>
 
   <div class="settings-area">
-    <h3 style="margin-top:0; color:var(--orange)">1. BULK TEAM IMPORT</h3>
-    <textarea id="import-area" placeholder="Example Format:&#10;1 | TEAM ELEMANTX&#10;2 | TEAM GRAVIX"></textarea>
+    <h3 style="margin-top:0; color:var(--orange)">BULK TEAM IMPORT</h3>
+    <textarea id="import-area" placeholder="1 | TEAM NAME&#10;2 | TEAM NAME"></textarea>
     <div class="btn-group">
         <button class="btn" style="background:#333" onclick="importSlots()">IMPORT LIST</button>
         <button class="btn" style="background:var(--blue)" onclick="window.open('view.html','_blank')">OPEN OVERLAY</button>
-        <button class="btn" style="background:var(--red)" onclick="toggleUI(true)">HIDE ALL SETTINGS</button>
+        <button class="btn" style="background:var(--red)" onclick="toggleUI(true)">HIDE SETTINGS</button>
     </div>
   </div>
 
   <div class="settings-panel settings-area">
-    <h3 style="margin-top:0; color:var(--orange)">2. TEAM COLORS & LOGO SETUP</h3>
+    <h3 style="margin-top:0; color:var(--orange)">SLOT DATABASE (COLORS LOCKED)</h3>
     <table>
       <thead>
         <tr>
           <th>SLOT</th>
-          <th>ON/OFF</th>
+          <th>ACTIVE</th>
           <th>TEAM NAME</th>
           <th>LOGO/TEXT</th>
-          <th>LIVE COLOR</th>
         </tr>
       </thead>
       <tbody id="configTable"></tbody>
@@ -81,6 +76,16 @@
 
 <script>
   const FIREBASE_URL = "https://bgmi-overlay-default-rtdb.firebaseio.com/liveData.json";
+
+  // Sanjay, ye aapke images se liye gaye exact permanent colors hain
+  const fixedColors = {
+    1: '#10449e', 2: '#1b5e20', 3: '#c62828', 4: '#e65100', 5: '#6a1b9a',
+    6: '#2ecc71', 7: '#ad1457', 8: '#00796b', 9: '#795548', 10: '#303f9f',
+    11: '#fbc02d', 12: '#1565c0', 13: '#388e3c', 14: '#ff8f00', 15: '#d81b60',
+    16: '#7b1fa2', 17: '#00897b', 18: '#9e9e9e', 19: '#558b2f', 20: '#5d4037',
+    21: '#0277bd', 22: '#616161', 23: '#ff5722', 24: '#7cb342', 25: '#263238'
+  };
+
   let teamDB = JSON.parse(localStorage.getItem('bgmi_v23_db') || '{}');
   let activeMap = JSON.parse(localStorage.getItem('bgmi_active_map') || '[]');
   if(activeMap.length === 0) activeMap = Array(26).fill(true);
@@ -95,26 +100,23 @@
     table.innerHTML = "";
 
     for(let i=1; i<=25; i++) {
-      if(!teamDB[i]) teamDB[i] = { name: `TEAM ${i}`, logo: `${i}`, sbg: (i==4||i==13?'#2ecc71':'#ff4500') };
+      if(!teamDB[i]) teamDB[i] = { name: `TEAM ${i}`, logo: `${i}` };
       const t = teamDB[i];
+      const color = fixedColors[i]; // Permanent color pick
       const on = activeMap[i];
 
-      // Update Grid Blocks
       grid.innerHTML += `
-        <div class="grid-item ${on ? '' : 'disabled-slot'}" id="slot-${i}" onclick="sendData(${i})" style="border-bottom: 5px solid ${t.sbg}">
-            <div class="status-dot ${on ? '' : 'off'}"></div>
+        <div class="grid-item ${on ? '' : 'disabled-slot'}" id="slot-${i}" onclick="sendData(${i})" style="border-bottom: 5px solid ${color}">
             <h2>${i}</h2>
             <p>${t.name}</p>
         </div>`;
 
-      // Update Config Table
       table.innerHTML += `
         <tr>
           <td><b>${i}</b></td>
-          <td><input type="checkbox" ${on ? 'checked' : ''} onchange="toggleSlot(${i}, this.checked)" style="width:15px;"></td>
+          <td><input type="checkbox" ${on ? 'checked' : ''} onchange="toggleSlot(${i}, this.checked)" style="width:20px;"></td>
           <td><input value="${t.name}" onchange="update(${i}, 'name', this.value)"></td>
           <td><input value="${t.logo}" onchange="update(${i}, 'logo', this.value)"></td>
-          <td><input type="color" value="${t.sbg}" onchange="update(${i}, 'sbg', this.value)"></td>
         </tr>`;
     }
   }
@@ -128,15 +130,10 @@
       const m=line.match(/(\d+)\s*[|•-]\s*(.+)/);
       if(m){
         const slot = parseInt(m[1]);
-        if(slot>=1 && slot<=25) {
-            if(!teamDB[slot]) teamDB[slot] = {};
-            teamDB[slot].name = m[2].trim();
-        }
+        if(slot>=1 && slot<=25) teamDB[slot].name = m[2].trim();
       }
     });
-    localStorage.setItem('bgmi_v23_db',JSON.stringify(teamDB)); 
-    init();
-    alert("Team List Updated!");
+    localStorage.setItem('bgmi_v23_db',JSON.stringify(teamDB)); init();
   }
 
   function toggleUI(hide) {
@@ -150,7 +147,7 @@
     document.getElementById(`slot-${slot}`).classList.add('active-slot');
     
     const t = teamDB[slot];
-    const payload = {slot, name:t.name, logo:t.logo, sbg:t.sbg, ts:Date.now()};
+    const payload = {slot, name:t.name, logo:t.logo, sbg:fixedColors[slot], ts:Date.now()};
     localStorage.setItem('bgmi_v23_push', JSON.stringify(payload));
     fetch(FIREBASE_URL, {method:"PUT", body:JSON.stringify(payload)});
     document.getElementById('liveStatus').textContent = `LIVE: ${t.name}`;
