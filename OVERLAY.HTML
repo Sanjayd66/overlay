@@ -2,110 +2,146 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>BGMI HOTKEY ADMIN - 25 SLOTS</title>
+  <title>BGMI PRO ADMIN - CLEAN MODE</title>
   <style>
-    :root { --orange:#ff5a00; --blue:#0088ff; --green:#28a745; --red:#dc3545; }
-    body{margin:0;font-family:'Segoe UI',sans-serif;background:#050505;color:#fff;display:flex;height:100vh;}
-    #admin{width:100%;background:#111;padding:20px;overflow-y:auto;}
-    .status{background:#000;margin-bottom:15px;padding:15px;border:1px solid #333;border-left:5px solid var(--orange);font-size:18px;text-align:center;}
-    .btn-group{display:flex;gap:15px;margin-bottom:15px;}
-    .btn{flex:1;padding:12px;border:none;border-radius:4px;color:#fff;font-weight:bold;cursor:pointer;font-size:14px;text-transform:uppercase;}
+    :root { --orange:#ff5a00; --blue:#0088ff; --green:#28a745; --red:#dc3545; --dark:#111; }
+    body{margin:0;font-family:'Oswald',sans-serif;background:#050505;color:#fff;overflow-x:hidden;}
+    #admin{padding:20px; transition: 0.3s;}
     
-    .metrics{display:flex;gap:15px;font-size:14px;margin-bottom:15px;background:#222;padding:10px;border-radius:8px;}
-    .metric{color:var(--orange); font-weight:bold;}
-    #key-buffer { color: #fff; background: #444; padding: 2px 8px; border-radius: 4px; margin-left: 5px; }
-
-    .db-table{width:100%;border-collapse:collapse;font-size:13px;margin-top:20px;}
-    .db-table th{background:#222;color:var(--orange);padding:10px;text-align:left;}
-    .db-table td{padding:8px;border-bottom:1px solid #222;}
-    .db-table input{background:#000;color:#fff;border:1px solid #333;width:95%;padding:6px;font-size:13px;}
+    /* Header & Status */
+    .header { background:#000; border-left:5px solid var(--orange); padding:15px; font-size:20px; margin-bottom:15px; display:flex; justify-content:space-between; align-items:center; }
+    .status-msg { color: var(--green); font-weight: bold; }
     
-    .manual-show{background:var(--blue);color:#fff;border:none;padding:8px;border-radius:4px;cursor:pointer;font-size:11px;width:100%;font-weight:bold;}
+    /* Control Buttons */
+    .top-controls { display:flex; gap:15px; margin-bottom:20px; }
+    .btn { padding:12px 25px; border:none; border-radius:4px; color:#fff; font-weight:bold; cursor:pointer; text-transform:uppercase; font-size:13px; }
+    .btn-hide { background: var(--red); }
+    .btn-show { background: var(--green); display:none; position:fixed; top:10px; right:10px; z-index:1000; }
+    
+    /* Main Table Settings */
+    .settings-area { transition: 0.3s; }
+    .db-table { width:100%; border-collapse:collapse; background: var(--dark); border-radius: 8px; overflow: hidden; }
+    .db-table th { background:#222; color:var(--orange); padding:12px; text-align:left; }
+    .db-table td { padding:10px; border-bottom:1px solid #333; }
+    .db-table input { background:#000; color:#fff; border:1px solid #444; width:90%; padding:8px; border-radius:4px; }
+    
+    /* Big Numbers / Manual Show Buttons */
+    .manual-show { background:var(--blue); color:#fff; border:none; padding:15px; border-radius:4px; cursor:pointer; font-size:24px; width:100px; font-weight:bold; }
+    .manual-show:hover { background: #0056b3; }
+    
+    /* Remove Button */
+    .btn-remove { background: #444; color: #ff4444; border: 1px solid #ff4444; padding: 5px 10px; cursor: pointer; border-radius: 4px; font-weight: bold; }
+    .btn-remove:hover { background: #ff4444; color: #fff; }
+    
+    /* Hidden Classes */
+    .hide-ui { display: none !important; }
+    .slot-hidden { display: none !important; }
+    
+    .metrics { background:#222; padding:15px; border-radius:8px; margin-bottom:15px; font-size:16px; display:flex; gap:20px; }
+    #key-buffer { color: var(--orange); font-weight: bold; background: #000; padding: 2px 10px; border-radius: 4px; }
   </style>
 </head>
 <body>
+
+<button id="showAllBtn" class="btn btn-show" onclick="toggleSettings(false)">SHOW SETTINGS</button>
+
 <div id="admin">
-  <div id="status" class="status">25-SLOT HOTKEY MODE: TYPE DIGITS FAST (e.g., '1' then '4' for Slot 14)</div>
+  <div class="header">
+    <span>CASTING DASHBOARD: 100% RELIABLE</span>
+    <span id="stMsg" class="status-msg">READY</span>
+  </div>
 
   <div class="metrics">
-    <div class="metric">LAST SENT: <span id="mWin">-</span></div>
-    <div class="metric">KEYBOARD INPUT: <span id="key-buffer">NONE</span></div>
+    <div>LAST SENT: <span id="mWin" style="color:var(--blue)">-</span></div>
+    <div>TYPING: <span id="key-buffer">NONE</span></div>
   </div>
 
-  <div class="btn-group">
+  <div class="top-controls settings-area">
     <button class="btn" style="background:var(--blue)" onclick="window.open('view.html','_blank')">OPEN VIEW WINDOW</button>
+    <button class="btn btn-hide" onclick="toggleSettings(true)">HIDE ALL SETTINGS</button>
   </div>
 
-  <table class="db-table">
-    <thead><tr><th>#</th><th>ACTION</th><th>TEAM NAME</th><th>LOGO/TEXT</th><th>BG COLOR</th></tr></thead>
-    <tbody id="dbBody"></tbody>
-  </table>
+  <div class="settings-area">
+    <table class="db-table">
+      <thead>
+        <tr>
+          <th>SLOT #</th>
+          <th>REMOVE</th>
+          <th>ACTION (SEND)</th>
+          <th>TEAM NAME</th>
+          <th>COLOR</th>
+        </tr>
+      </thead>
+      <tbody id="dbBody"></tbody>
+    </table>
+  </div>
 </div>
 
 <script>
   const FIREBASE_URL = "https://bgmi-overlay-default-rtdb.firebaseio.com/liveData.json";
   let teamDB = JSON.parse(localStorage.getItem('bgmi_v23_db') || '{}');
+  let hiddenSlots = JSON.parse(localStorage.getItem('bgmi_hidden_slots') || '[]');
   
-  // Hotkey Variables
   let inputBuffer = "";
   let bufferTimeout = null;
 
-  function renderTableFull(){
+  function renderTable(){
     const tb = document.getElementById('dbBody');
     tb.innerHTML = "";
     for(let i=1;i<=25;i++){
-      if(!teamDB[i]) teamDB[i]={name:`TEAM ${i}`,logo:`${i}`,sbg:'#28a745'};
-      const t=teamDB[i];
-      tb.innerHTML += `<tr>
-        <td><b>${i}</b></td>
-        <td><button class="manual-show" onclick="sendSlot(${i})">SEND SLOT ${i}</button></td>
-        <td><input value="${t.name}" onchange="updateDB(${i},'name',this.value)"></td>
-        <td><input value="${t.logo}" onchange="updateDB(${i},'logo',this.value)"></td>
-        <td><input type="color" value="${t.sbg}" onchange="updateDB(${i},'sbg',this.value)"></td>
-      </tr>`;
+      if(!teamDB[i]) teamDB[i]={name:`TEAM ${i}`,logo:`${i}`,sbg:'#2ecc71'};
+      const t = teamDB[i];
+      const isHidden = hiddenSlots.includes(i);
+      
+      tb.innerHTML += `
+        <tr id="row-${i}" class="${isHidden ? 'slot-hidden' : ''}">
+          <td style="font-size:20px; font-weight:bold; color:var(--orange)">${i}</td>
+          <td><button class="btn-remove" onclick="removeSlot(${i})">X</button></td>
+          <td><button class="manual-show" onclick="sendSlot(${i})">${i}</button></td>
+          <td class="settings-area"><input value="${t.name}" onchange="updateDB(${i},'name',this.value)"></td>
+          <td class="settings-area"><input type="color" value="${t.sbg}" onchange="updateDB(${i},'sbg',this.value)"></td>
+        </tr>`;
     }
   }
-  renderTableFull();
 
-  function saveDB(){ localStorage.setItem('bgmi_v23_db',JSON.stringify(teamDB)); }
-  function updateDB(i,k,v){ teamDB[i][k]=v; saveDB(); }
+  function updateDB(i,k,v){ teamDB[i][k]=v; localStorage.setItem('bgmi_v23_db',JSON.stringify(teamDB)); }
+
+  function removeSlot(i){
+    if(confirm(`Slot ${i} ko permanently hata dein?`)){
+      hiddenSlots.push(i);
+      localStorage.setItem('bgmi_hidden_slots', JSON.stringify(hiddenSlots));
+      renderTable();
+    }
+  }
+
+  function toggleSettings(hide){
+    const areas = document.querySelectorAll('.settings-area');
+    const showBtn = document.getElementById('showAllBtn');
+    areas.forEach(el => el.classList.toggle('hide-ui', hide));
+    showBtn.style.display = hide ? 'block' : 'none';
+  }
 
   function sendSlot(slot){
-    if(slot < 1 || slot > 25) return;
-    const t=teamDB[slot];
-    if(!t) return;
-    
+    if(hiddenSlots.includes(slot)) return;
+    const t = teamDB[slot];
     const payload = {slot, name:t.name, logo:t.logo, sbg:t.sbg, ts:Date.now()};
     localStorage.setItem('bgmi_v23_push', JSON.stringify(payload));
-    pushToFirebase(payload);
-
-    document.getElementById('status').textContent=`✅ SENT: ${t.name} (SLOT ${slot})`;
+    fetch(FIREBASE_URL,{method:"PUT",body:JSON.stringify(payload)});
     document.getElementById('mWin').textContent = slot;
+    document.getElementById('stMsg').textContent = `✅ SENT: ${t.name}`;
   }
 
-  async function pushToFirebase(payload){
-    try{
-      await fetch(FIREBASE_URL,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
-    }catch(e){console.log("Firebase error",e);}
-  }
-
-  // --- MULTI-DIGIT HOTKEY LOGIC ---
+  // --- HOTKEY LOGIC (Double Digit 1-25) ---
   window.addEventListener('keydown', (e) => {
-    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-
-    // Listen for numbers 0-9
+    if (e.target.tagName === 'INPUT') return;
     if (e.key >= '0' && e.key <= '9') {
       clearTimeout(bufferTimeout);
       inputBuffer += e.key;
       document.getElementById('key-buffer').textContent = inputBuffer;
-
-      // Agar 0.5 seconds tak dusra key nahi dabaya, toh process karlo
       bufferTimeout = setTimeout(() => {
         const slot = parseInt(inputBuffer);
-        if (slot >= 1 && slot <= 25) {
+        if (slot >= 1 && slot <= 25 && !hiddenSlots.includes(slot)) {
           sendSlot(slot);
-        } else {
-          document.getElementById('status').textContent = "⚠️ INVALID SLOT: USE 1-25";
         }
         inputBuffer = "";
         document.getElementById('key-buffer').textContent = "NONE";
@@ -113,6 +149,7 @@
     }
   });
 
+  renderTable();
 </script>
 </body>
 </html>
