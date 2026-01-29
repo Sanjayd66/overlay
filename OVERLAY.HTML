@@ -2,134 +2,73 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>BGMI DUAL VERIFY ADMIN</title>
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <title>BGMI HOTKEY ADMIN</title>
   <style>
     :root { --orange:#ff5a00; --blue:#0088ff; --green:#28a745; --red:#dc3545; }
     body{margin:0;font-family:'Segoe UI',sans-serif;background:#050505;color:#fff;display:flex;height:100vh;}
-    #admin{width:720px;background:#111;border-right:2px solid var(--orange);padding:15px;overflow-y:auto;}
-    .status{background:#000;margin-bottom:10px;padding:10px;border:1px solid #333;border-left:5px solid #0f0;font-size:15px;text-align:center;}
-    .btn-group{display:flex;gap:10px;margin-bottom:10px;}
-    .btn{flex:1;padding:10px;border:none;border-radius:4px;color:#fff;font-weight:bold;cursor:pointer;font-size:12px;text-transform:uppercase;}
-    #import-area{width:95%;height:60px;background:#1a1a1a;color:#0f0;border:1px solid #333;padding:6px;font-size:11px;border-radius:4px;resize:none;margin-bottom:5px;}
-    .preview-box{position:relative;width:100%;background:#000;border:1px solid #444;margin-bottom:10px;line-height:0;}
-    #v{width:100%;background:#222;}
-    #sel-canvas{position:absolute;top:0;left:0;width:100%;height:100%;cursor:crosshair;}
-    #debug-canvas{width:100%;height:90px;background:#000;border:1px solid #0f0;margin-bottom:10px;}
-    .metrics{display:flex;gap:10px;font-size:11px;margin-bottom:10px;}
-    .metric{background:#222;padding:6px 10px;border-radius:4px;}
-    .db-table{width:100%;border-collapse:collapse;font-size:11px;}
-    .db-table th{background:#222;color:var(--orange);padding:6px;text-align:left;}
-    .db-table td{padding:4px;}
-    .db-table tr.off{opacity:.3;}
-    .db-table input{background:#000;color:#fff;border:1px solid #333;width:90%;padding:3px;font-size:11px;}
-    .toggle-btn{cursor:pointer;padding:3px 6px;border-radius:3px;border:none;font-weight:bold;font-size:10px;}
-    .on{background:var(--green);color:#fff;}
-    .off-btn{background:#444;color:#aaa;}
-    .manual-show{background:var(--blue);color:#fff;border:none;padding:4px;border-radius:3px;cursor:pointer;font-size:10px;width:100%;font-weight:bold;}
-    .verify-status{padding:8px;margin:5px 0;border-radius:4px;font-size:12px;}
-    .match{background:var(--green);}
-    .mismatch{background:var(--red);}
+    #admin{width:100%;background:#111;padding:20px;overflow-y:auto;}
+    .status{background:#000;margin-bottom:15px;padding:15px;border:1px solid #333;border-left:5px solid var(--orange);font-size:18px;text-align:center;}
+    .btn-group{display:flex;gap:15px;margin-bottom:15px;}
+    .btn{flex:1;padding:12px;border:none;border-radius:4px;color:#fff;font-weight:bold;cursor:pointer;font-size:14px;text-transform:uppercase;}
+    #import-area{width:98%;height:80px;background:#1a1a1a;color:#0f0;border:1px solid #333;padding:10px;font-size:12px;border-radius:4px;resize:none;margin-bottom:10px;}
+    
+    /* Hotkey Info Panel */
+    .metrics{display:flex;gap:15px;font-size:14px;margin-bottom:15px;background:#222;padding:10px;border-radius:8px;}
+    .metric{color:var(--orange); font-weight:bold;}
+
+    .db-table{width:100%;border-collapse:collapse;font-size:13px;margin-top:20px;}
+    .db-table th{background:#222;color:var(--orange);padding:10px;text-align:left;}
+    .db-table td{padding:8px;border-bottom:1px solid #222;}
+    .db-table input{background:#000;color:#fff;border:1px solid #333;width:95%;padding:6px;font-size:13px;}
+    
+    .manual-show{background:var(--blue);color:#fff;border:none;padding:8px;border-radius:4px;cursor:pointer;font-size:11px;width:100%;font-weight:bold;}
+    .manual-show:active{background:var(--green);}
   </style>
 </head>
 <body>
 <div id="admin">
-  <div id="status" class="status">READY: START CAPTURE, RECTANGLE(NUMBER) + DOT(COLOR) SET KARO</div>
+  <div id="status" class="status">HOTKEY MODE ACTIVE: USE NUMPAD 1-9 OR BUTTONS</div>
 
   <div class="metrics">
-    <div class="metric">OCR: <span id="mOCR">-</span></div>
-    <div class="metric">Dot R: <span id="mR">0</span> G:<span id="mG">0</span> B:<span id="mB">0</span></div>
-    <div class="metric">Slot: <span id="mWin">-</span></div>
-    <div class="metric" id="verifyStatus">-</div>
+    <div class="metric">LAST SENT SLOT: <span id="mWin">-</span></div>
+    <div class="metric">HOTKEYS: NUMPAD [1-9]</div>
   </div>
 
   <div class="btn-group">
-    <button id="startBtn" class="btn" style="background:var(--orange)">START CAPTURE</button>
-    <button class="btn" style="background:var(--blue)" onclick="window.open('view.html','_blank')">OPEN VIEW</button>
+    <button class="btn" style="background:var(--blue)" onclick="window.open('view.html','_blank')">OPEN VIEW WINDOW</button>
   </div>
 
-  <textarea id="import-area" placeholder="1 | TEAM K9&#10;2 | TEAM XYZ&#10;3 | TEAM ABC"></textarea>
-  <button class="btn" style="background:#333;width:100%;margin-bottom:10px;" onclick="importSlots()">UPDATE SLOT LIST</button>
-
-  <div style="font-size:11px;margin-bottom:6px;">
-    NOTE: 1️⃣ Rectangle: NUMBER AREA crop karo | 2️⃣ Dot: COLOR BLOCK center pe click
-  </div>
-
-  <div class="preview-box">
-    <video id="v" autoplay playsinline muted></video>
-    <canvas id="sel-canvas"></canvas>
-  </div>
-
-  <canvas id="debug-canvas"></canvas>
+  <textarea id="import-area" placeholder="1 | TEAM K9&#10;2 | TEAM XYZ"></textarea>
+  <button class="btn" style="background:#333;width:100%;margin-bottom:20px;" onclick="importSlots()">UPDATE SLOT LIST</button>
 
   <table class="db-table">
-    <thead><tr><th>#</th><th>ON</th><th>SHOW</th><th>TEAM NAME</th><th>LOGO/TEXT</th><th>BG COLOR</th></tr></thead>
+    <thead><tr><th>#</th><th>ACTION</th><th>TEAM NAME</th><th>LOGO/TEXT</th><th>BG COLOR</th></tr></thead>
     <tbody id="dbBody"></tbody>
   </table>
 </div>
 
 <script>
   const FIREBASE_URL = "https://bgmi-overlay-default-rtdb.firebaseio.com/liveData.json";
-
-  // Tumhare diye hue exact slot colors
-  const slotColors = {
-    1:  {r:16,  g:68,  b:158},
-    2:  {r:27,  g:94,  b:32},
-    3:  {r:198, g:40,  b:40},
-    4:  {r:230, g:81,  b:0},
-    5:  {r:106, g:27,  b:154},
-    6:  {r:46,  g:125, b:50},
-    7:  {r:173, g:20,  b:87},
-    8:  {r:0,   g:121, b:107},
-    9:  {r:121, g:85,  b:72},
-    10: {r:48,  g:63,  b:159},
-    11: {r:251, g:192, b:45},
-    12: {r:21,  g:101, b:192},
-    13: {r:56,  g:142, b:60},
-    14: {r:255, g:143, b:0},
-    15: {r:216, g:27,  b:96},
-    16: {r:123, g:31,  b:162},
-    17: {r:0,   g:137, b:123},
-    18: {r:158, g:158, b:158},
-    19: {r:85,  g:139, b:47},
-    20: {r:93,  g:64,  b:55},
-    21: {r:2,   g:119, b:189},
-    22: {r:97,  g:97,  b:97},
-    23: {r:255, g:87,  b:34},
-    24: {r:124, g:179, b:66},
-    25: {r:38,  g:50,  b:56}
-  };
-
-  const v = document.getElementById('v');
-  const selC = document.getElementById('sel-canvas');
-  const sCtx = selC.getContext('2d');
-  const dC = document.getElementById('debug-canvas');
-  const dCtx = dC.getContext('2d');
-
-  let ocrCrop = {x:0,y:0,w:0,h:0,drawing:false};  // OCR rectangle
-  let dot = {x:null,y:null,r:0.5};                  // Color dot
-  let scanning = false;
-  let votes = {}, scanCount = 0, lastSlot = null;
-  let worker = null;
-
   let teamDB = JSON.parse(localStorage.getItem('bgmi_v23_db') || '{}');
-  let activeSlots = Array(26).fill(true);
 
-  // Table render (same)
-  function renderTable(){/* previous code same */renderTableFull();}
   function renderTableFull(){
     const tb = document.getElementById('dbBody');
     tb.innerHTML = "";
     for(let i=1;i<=25;i++){
       if(!teamDB[i]) teamDB[i]={name:`TEAM ${i}`,logo:`${i}`,sbg:'#28a745'};
-      const t=teamDB[i], on=!!activeSlots[i];
-      tb.innerHTML += `<tr class="${on?'':'off'}"><td>${i}</td><td><button class="toggle-btn ${on?'on':'off-btn'}" onclick="toggleSlot(${i})">${on?'ON':'OFF'}</button></td><td><button class="manual-show" onclick="pushSlot(${i});pushToFirebase(${i});">SHOW</button></td><td><input value="${t.name}" onchange="updateDB(${i},'name',this.value)"></td><td><input value="${t.logo}" onchange="updateDB(${i},'logo',this.value)"></td><td><input type="color" value="${t.sbg}" onchange="updateDB(${i},'sbg',this.value)"></td></tr>`;
+      const t=teamDB[i];
+      tb.innerHTML += `<tr>
+        <td><b>${i}</b></td>
+        <td><button class="manual-show" onclick="sendSlot(${i})">SEND (HOTKEY ${i})</button></td>
+        <td><input value="${t.name}" onchange="updateDB(${i},'name',this.value)"></td>
+        <td><input value="${t.logo}" onchange="updateDB(${i},'logo',this.value)"></td>
+        <td><input type="color" value="${t.sbg}" onchange="updateDB(${i},'sbg',this.value)"></td>
+      </tr>`;
     }
   }
   renderTableFull();
 
   function saveDB(){ localStorage.setItem('bgmi_v23_db',JSON.stringify(teamDB)); }
-  function toggleSlot(i){ activeSlots[i]=!activeSlots[i]; renderTableFull(); }
   function updateDB(i,k,v){ teamDB[i][k]=v; saveDB(); }
 
   function importSlots(){
@@ -145,190 +84,45 @@
     document.getElementById('status').textContent="SLOT LIST UPDATED";
   }
 
-  function pushSlot(slot){
+  function sendSlot(slot){
     const t=teamDB[slot];
     if(!t) return;
-    lastSlot = slot;
-    localStorage.setItem('bgmi_v23_push', JSON.stringify({slot,name:t.name,logo:t.logo,sbg:t.sbg,ts:Date.now()}));
-    document.getElementById('status').textContent=`✅ LIVE: ${t.name} (SLOT ${slot})`;
+    
+    const payload = {slot, name:t.name, logo:t.logo, sbg:t.sbg, ts:Date.now()};
+    
+    // Local storage push for local view
+    localStorage.setItem('bgmi_v23_push', JSON.stringify(payload));
+    
+    // Firebase push for remote view
+    pushToFirebase(payload);
+
+    document.getElementById('status').textContent=`✅ SENT: ${t.name} (SLOT ${slot})`;
     document.getElementById('mWin').textContent = slot;
   }
 
-  async function pushToFirebase(slot){
-    const t = teamDB[slot];
-    if(!t) return;
-    const payload = {slot,name:t.name,logo:t.logo,sbg:t.sbg,ts:Date.now()};
+  async function pushToFirebase(payload){
     try{
       await fetch(FIREBASE_URL,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
     }catch(e){console.log("Firebase push failed",e);}
   }
 
-  // Screen capture + Tesseract init
-  document.getElementById('startBtn').addEventListener('click', async ()=>{
-    const btn = document.getElementById('startBtn');
-    btn.disabled=true; btn.textContent="CAPTURE...";
-    try{
-      worker = await Tesseract.createWorker('eng',1,{logger:m=>console.log(m)});
-      const stream = await navigator.mediaDevices.getDisplayMedia({video:true});
-      v.srcObject = stream;
-      v.onloadedmetadata = ()=>{
-        selC.width = v.clientWidth;
-        selC.height = v.clientHeight;
-        // Default OCR crop center me 100x40
-        ocrCrop = {x:selC.width*0.4, y:selC.height*0.4, w:100, h:40};
-        dot = {x:selC.width*0.6, y:selC.height*0.4, r:0.5};
-        drawAreas();
-        document.getElementById('status').textContent="DUAL MODE: RECTANGLE(NUMBER) + DOT(COLOR) ADJUST KARO";
-        scanLoop();
-        btn.textContent="RUNNING (REFRESH TO STOP)";
-      };
-    }catch(e){
-      document.getElementById('status').textContent="SCREEN CAPTURE BLOCKED";
-      btn.disabled=false; btn.textContent="START CAPTURE";
+  // --- HOTKEY LOGIC ---
+  window.addEventListener('keydown', (e) => {
+    // Check if user is typing in an input box (don't trigger hotkey then)
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+    // Numpad or Top Row numbers 1-9
+    if (e.key >= '1' && e.key <= '9') {
+      const slot = parseInt(e.key);
+      sendSlot(slot);
+    }
+    
+    // Optional: Press '0' to clear or hide (Optional logic)
+    if (e.key === '0') {
+      document.getElementById('status').textContent = "READY: WAITING FOR HOTKEY";
     }
   });
 
-  // Dual area drawing
-  function drawAreas(){
-    sCtx.clearRect(0,0,selC.width,selC.height);
-    
-    // OCR rectangle (red)
-    if(ocrCrop.w>0){
-      sCtx.strokeStyle="#f00"; sCtx.lineWidth=2;
-      sCtx.strokeRect(ocrCrop.x,ocrCrop.y,ocrCrop.w,ocrCrop.h);
-    }
-    
-    // Color dot (green)
-    if(dot.x!=null){
-      sCtx.strokeStyle="#0f0"; sCtx.lineWidth=1;
-      sCtx.beginPath();
-      sCtx.arc(dot.x, dot.y, dot.r, 0, Math.PI*2);
-      sCtx.stroke();
-    }
-  }
-
-  // Mouse events: Left=OCR rect, Right=Dot
-  selC.onmousedown = e=>{
-    if(e.button===0){ // Left click: OCR rectangle
-      ocrCrop.x=e.offsetX; ocrCrop.y=e.offsetY; ocrCrop.drawing=true;
-    }
-  };
-  selC.onmousemove = e=>{
-    if(!ocrCrop.drawing) return;
-    sCtx.clearRect(0,0,selC.width,selC.height);
-    sCtx.strokeStyle="#f00"; sCtx.lineWidth=2;
-    sCtx.strokeRect(ocrCrop.x,ocrCrop.y,e.offsetX-ocrCrop.x,e.offsetY-ocrCrop.y);
-    if(dot.x!=null){
-      sCtx.strokeStyle="#0f0"; sCtx.lineWidth=1;
-      sCtx.beginPath(); sCtx.arc(dot.x, dot.y, dot.r, 0, Math.PI*2); sCtx.stroke();
-    }
-  };
-  selC.onmouseup = e=>{
-    if(ocrCrop.drawing){
-      ocrCrop.w=Math.abs(e.offsetX-ocrCrop.x);
-      ocrCrop.h=Math.abs(e.offsetY-ocrCrop.y);
-      ocrCrop.drawing=false;
-      drawAreas();
-      document.getElementById('status').textContent=`OCR:${ocrCrop.w}x${ocrCrop.h} | DOT READY`;
-    }
-  };
-  selC.oncontextmenu = e=>{ // Right click: Dot
-    e.preventDefault();
-    dot.x = e.offsetX;
-    dot.y = e.offsetY;
-    drawAreas();
-    document.getElementById('status').textContent="DOT SET";
-  };
-
-  // Color functions
-  function getAverageColor(img){
-    const d = img.data; let r=0,g=0,b=0,count=0;
-    for(let i=0;i<d.length;i+=4){ r+=d[i]; g+=d[i+1]; b+=d[i+2]; count++;}
-    return {r:r/count,g:g/count,b:b/count};
-  }
-  function closestSlot(col){
-    let bestSlot=null, bestDist=1e12;
-    for(const s in slotColors){
-      const c = slotColors[s];
-      const dist = Math.pow(col.r-c.r,2)+Math.pow(col.g-c.g,2)+Math.pow(col.b-c.b,2);
-      if(dist < bestDist){ bestDist=dist; bestSlot=parseInt(s,10);}
-    }
-    return bestSlot;
-  }
-
-  // DUAL VERIFICATION CORE
-  async function scanOnce(){
-    if(!v.srcObject || ocrCrop.w<10 || dot.x==null || scanning) return;
-    scanning = true;
-    
-    try{
-      const sx = v.videoWidth / selC.width;
-      const sy = v.videoHeight / selC.height;
-
-      // 1. OCR NUMBER READ
-      dC.width=120; dC.height=50;
-      dCtx.clearRect(0,0,dC.width,dC.height);
-      dCtx.drawImage(v, ocrCrop.x*sx, ocrCrop.y*sy, ocrCrop.w*sx, ocrCrop.h*sy, 0,0,dC.width,dC.height);
-      
-      // Simple threshold preprocessing
-      const imgData = dCtx.getImageData(0,0,dC.width,dC.height);
-      const data = imgData.data;
-      for(let i=0;i<data.length;i+=4){
-        const g=(data[i]+data[i+1]+data[i+2])/3;
-        data[i]=data[i+1]=data[i+2]=g>120?255:0;
-      }
-      dCtx.putImageData(imgData,0,0);
-
-      const {data:{text}} = await worker.recognize(dC);
-      const ocrNum = parseInt(text.match(/\d+/)?.[0]) || 0;
-
-      // 2. DOT COLOR READ (3x3 patch)
-      const patchW=3, patchH=3;
-      const srcX=(dot.x-patchW/2)*sx, srcY=(dot.y-patchH/2)*sy;
-      dC.width=patchW; dC.height=patchH;
-      dCtx.clearRect(0,0,dC.width,dC.height);
-      dCtx.drawImage(v, srcX, srcY, patchW*sx, patchH*sy, 0,0,dC.width,dC.height);
-      
-      const colorImg = dCtx.getImageData(0,0,dC.width,dC.height);
-      const avgColor = getAverageColor(colorImg);
-      const colorSlot = closestSlot(avgColor);
-
-      // 3. DUAL VERIFICATION
-      document.getElementById('mOCR').textContent = ocrNum || '-';
-      document.getElementById('mR').textContent = Math.round(avgColor.r);
-      document.getElementById('mG').textContent = Math.round(avgColor.g);
-      document.getElementById('mB').textContent = Math.round(avgColor.b);
-
-      const verifyEl = document.getElementById('verifyStatus');
-      if(ocrNum>=1 && ocrNum<=25 && colorSlot===ocrNum && activeSlots[ocrNum]){
-        verifyEl.textContent = `✅ MATCH: ${ocrNum}`;
-        verifyEl.className = 'metric match';
-        registerSlot(ocrNum);
-      } else {
-        verifyEl.textContent = `❌ MISMATCH: OCR=${ocrNum} COLOR=${colorSlot}`;
-        verifyEl.className = 'metric mismatch';
-      }
-
-    }catch(e){console.error(e);}
-    scanning = false;
-  }
-
-  function registerSlot(num){
-    votes[num] = (votes[num]||0)+1;
-    scanCount++;
-    if(scanCount>=6){
-      let best=null,bestV=-1;
-      Object.keys(votes).forEach(k=>{if(votes[k]>bestV){bestV=votes[k];best=parseInt(k,10);}});
-      if(best && best!==lastSlot){
-        pushSlot(best);
-        pushToFirebase(best);
-      }
-      votes={}; scanCount=0;
-    }
-    if(scanCount>20){votes={};scanCount=0;}
-  }
-
-  async function scanLoop(){ await scanOnce(); requestAnimationFrame(scanLoop); }
 </script>
 </body>
 </html>
