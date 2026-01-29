@@ -2,86 +2,84 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>BGMI PRO ADMIN - CLEAN MODE</title>
+  <title>BGMI PRO ADMIN - FULL CONTROL</title>
   <style>
-    :root { --orange:#ff5a00; --blue:#0088ff; --green:#28a745; --red:#dc3545; --dark:#111; }
+    :root { --orange:#ff5a00; --blue:#0088ff; --green:#2ecc71; --red:#dc3545; --dark:#111; }
     body{margin:0;font-family:'Oswald',sans-serif;background:#050505;color:#fff;overflow-x:hidden;}
-    #admin{padding:20px; transition: 0.3s;}
+    #admin{padding:20px;}
     
-    /* Header & Status */
     .header { background:#000; border-left:5px solid var(--orange); padding:15px; font-size:20px; margin-bottom:15px; display:flex; justify-content:space-between; align-items:center; }
     .status-msg { color: var(--green); font-weight: bold; }
     
-    /* Control Buttons */
-    .top-controls { display:flex; gap:15px; margin-bottom:20px; }
-    .btn { padding:12px 25px; border:none; border-radius:4px; color:#fff; font-weight:bold; cursor:pointer; text-transform:uppercase; font-size:13px; }
-    .btn-hide { background: var(--red); }
-    .btn-show { background: var(--green); display:none; position:fixed; top:10px; right:10px; z-index:1000; }
+    .top-controls { display:flex; gap:10px; margin-bottom:15px; }
+    .btn { padding:10px 20px; border:none; border-radius:4px; color:#fff; font-weight:bold; cursor:pointer; text-transform:uppercase; font-size:12px; }
     
-    /* Main Table Settings */
-    .settings-area { transition: 0.3s; }
-    .db-table { width:100%; border-collapse:collapse; background: var(--dark); border-radius: 8px; overflow: hidden; }
-    .db-table th { background:#222; color:var(--orange); padding:12px; text-align:left; }
-    .db-table td { padding:10px; border-bottom:1px solid #333; }
-    .db-table input { background:#000; color:#fff; border:1px solid #444; width:90%; padding:8px; border-radius:4px; }
+    .db-table { width:100%; border-collapse:collapse; background: var(--dark); border-radius: 8px; }
+    .db-table th { background:#222; color:var(--orange); padding:10px; text-align:left; }
+    .db-table td { padding:8px; border-bottom:1px solid #333; }
+    .db-table input { background:#000; color:#fff; border:1px solid #444; width:90%; padding:6px; border-radius:4px; font-size:12px; }
     
-    /* Big Numbers / Manual Show Buttons */
-    .manual-show { background:var(--blue); color:#fff; border:none; padding:15px; border-radius:4px; cursor:pointer; font-size:24px; width:100px; font-weight:bold; }
-    .manual-show:hover { background: #0056b3; }
+    .manual-show { background:var(--blue); color:#fff; border:none; padding:10px; border-radius:4px; cursor:pointer; font-size:20px; width:100%; font-weight:bold; }
     
-    /* Remove Button */
-    .btn-remove { background: #444; color: #ff4444; border: 1px solid #ff4444; padding: 5px 10px; cursor: pointer; border-radius: 4px; font-weight: bold; }
-    .btn-remove:hover { background: #ff4444; color: #fff; }
-    
-    /* Hidden Classes */
+    /* Active/Deactive Toggle */
+    .toggle-btn { padding:5px 10px; border-radius:4px; border:none; cursor:pointer; font-weight:bold; width:80px; }
+    .active-on { background: var(--green); color:#fff; }
+    .active-off { background: #444; color:#aaa; }
+    tr.deactivated { opacity: 0.3; }
+
+    /* Casting Mode */
     .hide-ui { display: none !important; }
-    .slot-hidden { display: none !important; }
+    #showSettingsBtn { display:none; position:fixed; top:10px; right:10px; background:var(--green); z-index:1000; }
     
-    .metrics { background:#222; padding:15px; border-radius:8px; margin-bottom:15px; font-size:16px; display:flex; gap:20px; }
-    #key-buffer { color: var(--orange); font-weight: bold; background: #000; padding: 2px 10px; border-radius: 4px; }
+    #import-area { width:100%; height:60px; background:#1a1a1a; color:#0f0; border:1px solid #333; padding:8px; font-size:12px; margin-bottom:10px; border-radius:4px; }
+    .metrics { background:#222; padding:12px; border-radius:8px; margin-bottom:15px; display:flex; gap:20px; font-size:14px; }
   </style>
 </head>
 <body>
 
-<button id="showAllBtn" class="btn btn-show" onclick="toggleSettings(false)">SHOW SETTINGS</button>
+<button id="showSettingsBtn" class="btn" onclick="toggleSettings(false)">SHOW SETTINGS</button>
 
 <div id="admin">
   <div class="header">
-    <span>CASTING DASHBOARD: 100% RELIABLE</span>
+    <span>BGMI DUAL PRODUCTION: ELEMANTX x GRAVIX</span>
     <span id="stMsg" class="status-msg">READY</span>
   </div>
 
   <div class="metrics">
-    <div>LAST SENT: <span id="mWin" style="color:var(--blue)">-</span></div>
-    <div>TYPING: <span id="key-buffer">NONE</span></div>
-  </div>
-
-  <div class="top-controls settings-area">
-    <button class="btn" style="background:var(--blue)" onclick="window.open('view.html','_blank')">OPEN VIEW WINDOW</button>
-    <button class="btn btn-hide" onclick="toggleSettings(true)">HIDE ALL SETTINGS</button>
+    <div>SENT SLOT: <span id="mWin" style="color:var(--blue)">-</span></div>
+    <div>BUFFER: <span id="key-buffer" style="color:var(--orange)">NONE</span></div>
   </div>
 
   <div class="settings-area">
-    <table class="db-table">
-      <thead>
-        <tr>
-          <th>SLOT #</th>
-          <th>REMOVE</th>
-          <th>ACTION (SEND)</th>
-          <th>TEAM NAME</th>
-          <th>COLOR</th>
-        </tr>
-      </thead>
-      <tbody id="dbBody"></tbody>
-    </table>
+    <textarea id="import-area" placeholder="Format: 1 | TEAM NAME (Naye teams yahan paste karein)"></textarea>
+    <div class="top-controls">
+        <button class="btn" style="background:#333" onclick="importSlots()">IMPORT LIST</button>
+        <button class="btn" style="background:var(--blue)" onclick="window.open('view.html','_blank')">OPEN OVERLAY</button>
+        <button class="btn" style="background:var(--red)" onclick="toggleSettings(true)">START CASTING (HIDE SETTINGS)</button>
+    </div>
   </div>
+
+  <table class="db-table">
+    <thead>
+      <tr>
+        <th>SLOT</th>
+        <th>STATUS</th>
+        <th>SEND</th>
+        <th class="settings-area">TEAM NAME</th>
+        <th class="settings-area">LOGO (URL/TEXT)</th>
+        <th class="settings-area">BG COLOR</th>
+      </tr>
+    </thead>
+    <tbody id="dbBody"></tbody>
+  </table>
 </div>
 
 <script>
   const FIREBASE_URL = "https://bgmi-overlay-default-rtdb.firebaseio.com/liveData.json";
   let teamDB = JSON.parse(localStorage.getItem('bgmi_v23_db') || '{}');
-  let hiddenSlots = JSON.parse(localStorage.getItem('bgmi_hidden_slots') || '[]');
-  
+  let activeSlots = JSON.parse(localStorage.getItem('bgmi_active_map') || '[]');
+  if(activeSlots.length === 0) activeSlots = Array(26).fill(true);
+
   let inputBuffer = "";
   let bufferTimeout = null;
 
@@ -89,62 +87,62 @@
     const tb = document.getElementById('dbBody');
     tb.innerHTML = "";
     for(let i=1;i<=25;i++){
-      if(!teamDB[i]) teamDB[i]={name:`TEAM ${i}`,logo:`${i}`,sbg:'#2ecc71'};
+      if(!teamDB[i]) teamDB[i]={name:`TEAM ${i}`,logo:`${i}`,sbg:(i==4||i==13?'#2ecc71':'#ff4500')};
       const t = teamDB[i];
-      const isHidden = hiddenSlots.includes(i);
+      const on = activeSlots[i];
       
       tb.innerHTML += `
-        <tr id="row-${i}" class="${isHidden ? 'slot-hidden' : ''}">
-          <td style="font-size:20px; font-weight:bold; color:var(--orange)">${i}</td>
-          <td><button class="btn-remove" onclick="removeSlot(${i})">X</button></td>
+        <tr id="row-${i}" class="${on ? '' : 'deactivated'}">
+          <td style="font-size:18px; font-weight:bold; color:var(--orange)">${i}</td>
+          <td><button class="toggle-btn ${on?'active-on':'active-off'}" onclick="toggleActive(${i})">${on?'ACTIVE':'OFF'}</button></td>
           <td><button class="manual-show" onclick="sendSlot(${i})">${i}</button></td>
           <td class="settings-area"><input value="${t.name}" onchange="updateDB(${i},'name',this.value)"></td>
+          <td class="settings-area"><input value="${t.logo}" onchange="updateDB(${i},'logo',this.value)"></td>
           <td class="settings-area"><input type="color" value="${t.sbg}" onchange="updateDB(${i},'sbg',this.value)"></td>
         </tr>`;
     }
   }
 
+  function toggleActive(i){ activeSlots[i] = !activeSlots[i]; localStorage.setItem('bgmi_active_map', JSON.stringify(activeSlots)); renderTable(); }
   function updateDB(i,k,v){ teamDB[i][k]=v; localStorage.setItem('bgmi_v23_db',JSON.stringify(teamDB)); }
 
-  function removeSlot(i){
-    if(confirm(`Slot ${i} ko permanently hata dein?`)){
-      hiddenSlots.push(i);
-      localStorage.setItem('bgmi_hidden_slots', JSON.stringify(hiddenSlots));
-      renderTable();
-    }
+  function importSlots(){
+    const text=document.getElementById('import-area').value;
+    text.split('\n').forEach(line=>{
+      const m=line.match(/(\d+)\s*[|•-]\s*(.+)/);
+      if(m){
+        const slot = parseInt(m[1]);
+        if(slot>=1 && slot<=25) teamDB[slot].name = m[2].trim();
+      }
+    });
+    localStorage.setItem('bgmi_v23_db',JSON.stringify(teamDB)); renderTable();
   }
 
   function toggleSettings(hide){
-    const areas = document.querySelectorAll('.settings-area');
-    const showBtn = document.getElementById('showAllBtn');
-    areas.forEach(el => el.classList.toggle('hide-ui', hide));
-    showBtn.style.display = hide ? 'block' : 'none';
+    document.querySelectorAll('.settings-area').forEach(el => el.classList.toggle('hide-ui', hide));
+    document.getElementById('showSettingsBtn').style.display = hide ? 'block' : 'none';
   }
 
   function sendSlot(slot){
-    if(hiddenSlots.includes(slot)) return;
+    if(!activeSlots[slot]) return;
     const t = teamDB[slot];
     const payload = {slot, name:t.name, logo:t.logo, sbg:t.sbg, ts:Date.now()};
     localStorage.setItem('bgmi_v23_push', JSON.stringify(payload));
     fetch(FIREBASE_URL,{method:"PUT",body:JSON.stringify(payload)});
     document.getElementById('mWin').textContent = slot;
-    document.getElementById('stMsg').textContent = `✅ SENT: ${t.name}`;
+    document.getElementById('stMsg').textContent = `✅ LIVE: ${t.name}`;
   }
 
-  // --- HOTKEY LOGIC (Double Digit 1-25) ---
   window.addEventListener('keydown', (e) => {
-    if (e.target.tagName === 'INPUT') return;
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
     if (e.key >= '0' && e.key <= '9') {
       clearTimeout(bufferTimeout);
       inputBuffer += e.key;
       document.getElementById('key-buffer').textContent = inputBuffer;
       bufferTimeout = setTimeout(() => {
         const slot = parseInt(inputBuffer);
-        if (slot >= 1 && slot <= 25 && !hiddenSlots.includes(slot)) {
-          sendSlot(slot);
-        }
-        inputBuffer = "";
-        document.getElementById('key-buffer').textContent = "NONE";
+        if (slot >= 1 && slot <= 25 && activeSlots[slot]) sendSlot(slot);
+        inputBuffer = ""; document.getElementById('key-buffer').textContent = "NONE";
       }, 500); 
     }
   });
