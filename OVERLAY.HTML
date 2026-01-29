@@ -2,35 +2,24 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>BGMI PRO GRID - PERMANENT COLORS</title>
+  <title>BGMI PRO SYNC ADMIN</title>
   <style>
     :root { --orange:#ff5a00; --blue:#0088ff; --green:#2ecc71; --red:#dc3545; --dark:#1a1a1a; }
     body{margin:0;font-family:'Oswald',sans-serif;background:#050505;color:#fff;overflow-x:hidden;}
     #admin{padding:20px;}
-    
     .header { background:#000; border-left:5px solid var(--orange); padding:15px; font-size:20px; margin-bottom:15px; display:flex; justify-content:space-between; align-items:center; }
-    
-    /* Control Grid */
     .grid-container { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 20px; }
-    .grid-item { 
-        background: var(--dark); border: 2px solid #333; border-radius: 8px; padding: 15px 5px; 
-        text-align: center; cursor: pointer; transition: 0.2s; position: relative;
-    }
-    .grid-item:hover { border-color: var(--orange); background: #222; }
+    .grid-item { background: var(--dark); border: 2px solid #333; border-radius: 8px; padding: 15px 5px; text-align: center; cursor: pointer; transition: 0.2s; position: relative; }
     .grid-item.active-slot { border-color: white; box-shadow: 0 0 15px rgba(255,255,255,0.5); }
     .grid-item.disabled-slot { opacity: 0.2; pointer-events: none; }
     .grid-item h2 { margin: 0; font-size: 32px; color: #fff; }
     .grid-item p { margin: 5px 0 0 0; font-size: 12px; color: #aaa; text-transform: uppercase; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-
     .btn-group { display: flex; gap: 10px; margin-bottom: 20px; }
     .btn { padding: 10px 20px; border:none; border-radius:4px; color:#fff; font-weight:bold; cursor:pointer; text-transform:uppercase; font-size:12px; }
-    
     #import-area { width:100%; height:80px; background:#111; color:#0f0; border:1px solid #444; padding:10px; font-size:12px; margin-bottom:10px; border-radius:4px; box-sizing: border-box; }
-    
     .settings-panel { background: #111; padding: 20px; border-radius: 8px; margin-top: 20px; border: 1px solid #333; }
     .hide-ui { display: none !important; }
     #showSettings { display:none; position:fixed; top:10px; right:10px; z-index:1000; background: var(--green); }
-    
     table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
     th, td { padding: 8px; text-align: left; border-bottom: 1px solid #222; }
     input { background:#000; color:#fff; border:1px solid #444; padding:5px; border-radius:4px; width: 95%; }
@@ -42,32 +31,26 @@
 
 <div id="admin">
   <div class="header">
-    <span>PERMANENT COLOR DASHBOARD</span>
-    <span id="liveStatus" style="color:var(--green); font-size: 14px;">SYSTEM READY</span>
+    <span>SYNC DASHBOARD (PC & MOBILE)</span>
+    <span id="liveStatus" style="color:var(--green); font-size: 14px;">READY</span>
   </div>
 
   <div class="grid-container" id="controlGrid"></div>
 
   <div class="settings-area">
-    <h3 style="margin-top:0; color:var(--orange)">BULK TEAM IMPORT</h3>
-    <textarea id="import-area" placeholder="1 | TEAM NAME&#10;2 | TEAM NAME"></textarea>
+    <textarea id="import-area" placeholder="1 | TEAM NAME"></textarea>
     <div class="btn-group">
-        <button class="btn" style="background:#333" onclick="importSlots()">IMPORT LIST</button>
-        <button class="btn" style="background:var(--blue)" onclick="window.open('view.html','_blank')">OPEN OVERLAY</button>
-        <button class="btn" style="background:var(--red)" onclick="toggleUI(true)">HIDE SETTINGS</button>
+        <button class="btn" style="background:#333" onclick="importSlots()">IMPORT</button>
+        <button class="btn" style="background:var(--orange)" onclick="syncToCloud()">☁️ SYNC TO CLOUD (SAVE)</button>
+        <button class="btn" style="background:var(--blue)" onclick="loadFromCloud()">🔄 LOAD FROM CLOUD</button>
+        <button class="btn" style="background:var(--red)" onclick="toggleUI(true)">CAST MODE</button>
     </div>
   </div>
 
   <div class="settings-panel settings-area">
-    <h3 style="margin-top:0; color:var(--orange)">SLOT DATABASE (COLORS LOCKED)</h3>
     <table>
       <thead>
-        <tr>
-          <th>SLOT</th>
-          <th>ACTIVE</th>
-          <th>TEAM NAME</th>
-          <th>LOGO/TEXT</th>
-        </tr>
+        <tr><th>SLOT</th><th>ACTIVE</th><th>TEAM NAME</th><th>LOGO</th></tr>
       </thead>
       <tbody id="configTable"></tbody>
     </table>
@@ -75,9 +58,10 @@
 </div>
 
 <script>
-  const FIREBASE_URL = "https://bgmi-overlay-default-rtdb.firebaseio.com/liveData.json";
+  // Firebase URLs for syncing data
+  const LIVE_URL = "https://bgmi-overlay-default-rtdb.firebaseio.com/liveData.json";
+  const CONFIG_URL = "https://bgmi-overlay-default-rtdb.firebaseio.com/configData.json";
 
-  // Sanjay, ye aapke images se liye gaye exact permanent colors hain
   const fixedColors = {
     1: '#10449e', 2: '#1b5e20', 3: '#c62828', 4: '#e65100', 5: '#6a1b9a',
     6: '#2ecc71', 7: '#ad1457', 8: '#00796b', 9: '#795548', 10: '#303f9f',
@@ -90,34 +74,38 @@
   let activeMap = JSON.parse(localStorage.getItem('bgmi_active_map') || '[]');
   if(activeMap.length === 0) activeMap = Array(26).fill(true);
 
-  let buffer = "";
-  let timeout = null;
+  async function syncToCloud() {
+    const data = { teamDB, activeMap };
+    try {
+      await fetch(CONFIG_URL, { method: "PUT", body: JSON.stringify(data) });
+      alert("PC ka data Cloud par save ho gaya!");
+    } catch(e) { alert("Sync failed!"); }
+  }
+
+  async function loadFromCloud() {
+    try {
+      const res = await fetch(CONFIG_URL);
+      const data = await res.json();
+      if(data) {
+        teamDB = data.teamDB;
+        activeMap = data.activeMap;
+        localStorage.setItem('bgmi_v23_db', JSON.stringify(teamDB));
+        localStorage.setItem('bgmi_active_map', JSON.stringify(activeMap));
+        init();
+        alert("Data Phone mein load ho gaya!");
+      }
+    } catch(e) { alert("Load failed!"); }
+  }
 
   function init() {
     const grid = document.getElementById('controlGrid');
     const table = document.getElementById('configTable');
-    grid.innerHTML = "";
-    table.innerHTML = "";
-
+    grid.innerHTML = ""; table.innerHTML = "";
     for(let i=1; i<=25; i++) {
       if(!teamDB[i]) teamDB[i] = { name: `TEAM ${i}`, logo: `${i}` };
-      const t = teamDB[i];
-      const color = fixedColors[i]; // Permanent color pick
-      const on = activeMap[i];
-
-      grid.innerHTML += `
-        <div class="grid-item ${on ? '' : 'disabled-slot'}" id="slot-${i}" onclick="sendData(${i})" style="border-bottom: 5px solid ${color}">
-            <h2>${i}</h2>
-            <p>${t.name}</p>
-        </div>`;
-
-      table.innerHTML += `
-        <tr>
-          <td><b>${i}</b></td>
-          <td><input type="checkbox" ${on ? 'checked' : ''} onchange="toggleSlot(${i}, this.checked)" style="width:20px;"></td>
-          <td><input value="${t.name}" onchange="update(${i}, 'name', this.value)"></td>
-          <td><input value="${t.logo}" onchange="update(${i}, 'logo', this.value)"></td>
-        </tr>`;
+      const t = teamDB[i]; const on = activeMap[i];
+      grid.innerHTML += `<div class="grid-item ${on ? '' : 'disabled-slot'}" id="slot-${i}" onclick="sendData(${i})" style="border-bottom: 5px solid ${fixedColors[i]}"><h2>${i}</h2><p>${t.name}</p></div>`;
+      table.innerHTML += `<tr><td><b>${i}</b></td><td><input type="checkbox" ${on ? 'checked' : ''} onchange="toggleSlot(${i}, this.checked)" style="width:20px;"></td><td><input value="${t.name}" onchange="update(${i}, 'name', this.value)"></td><td><input value="${t.logo}" onchange="update(${i}, 'logo', this.value)"></td></tr>`;
     }
   }
 
@@ -128,10 +116,7 @@
     const text=document.getElementById('import-area').value;
     text.split('\n').forEach(line=>{
       const m=line.match(/(\d+)\s*[|•-]\s*(.+)/);
-      if(m){
-        const slot = parseInt(m[1]);
-        if(slot>=1 && slot<=25) teamDB[slot].name = m[2].trim();
-      }
+      if(m){ const slot = parseInt(m[1]); if(slot>=1 && slot<=25) teamDB[slot].name = m[2].trim(); }
     });
     localStorage.setItem('bgmi_v23_db',JSON.stringify(teamDB)); init();
   }
@@ -143,30 +128,15 @@
 
   function sendData(slot) {
     if(!activeMap[slot]) return;
-    document.querySelectorAll('.grid-item').forEach(el => el.classList.remove('active-slot'));
-    document.getElementById(`slot-${slot}`).classList.add('active-slot');
-    
     const t = teamDB[slot];
     const payload = {slot, name:t.name, logo:t.logo, sbg:fixedColors[slot], ts:Date.now()};
-    localStorage.setItem('bgmi_v23_push', JSON.stringify(payload));
-    fetch(FIREBASE_URL, {method:"PUT", body:JSON.stringify(payload)});
+    fetch(LIVE_URL, {method:"PUT", body:JSON.stringify(payload)});
     document.getElementById('liveStatus').textContent = `LIVE: ${t.name}`;
   }
 
-  window.addEventListener('keydown', (e) => {
-    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-    if (e.key >= '0' && e.key <= '9') {
-      clearTimeout(timeout);
-      buffer += e.key;
-      timeout = setTimeout(() => {
-        const slot = parseInt(buffer);
-        if (slot >= 1 && slot <= 25 && activeMap[slot]) sendData(slot);
-        buffer = "";
-      }, 500); 
-    }
-  });
-
   init();
+  // Auto-load on open
+  loadFromCloud();
 </script>
 </body>
 </html>
