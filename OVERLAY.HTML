@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>BGMI HOTKEY ADMIN</title>
+  <title>BGMI HOTKEY ADMIN - 25 SLOTS</title>
   <style>
     :root { --orange:#ff5a00; --blue:#0088ff; --green:#28a745; --red:#dc3545; }
     body{margin:0;font-family:'Segoe UI',sans-serif;background:#050505;color:#fff;display:flex;height:100vh;}
@@ -10,11 +10,10 @@
     .status{background:#000;margin-bottom:15px;padding:15px;border:1px solid #333;border-left:5px solid var(--orange);font-size:18px;text-align:center;}
     .btn-group{display:flex;gap:15px;margin-bottom:15px;}
     .btn{flex:1;padding:12px;border:none;border-radius:4px;color:#fff;font-weight:bold;cursor:pointer;font-size:14px;text-transform:uppercase;}
-    #import-area{width:98%;height:80px;background:#1a1a1a;color:#0f0;border:1px solid #333;padding:10px;font-size:12px;border-radius:4px;resize:none;margin-bottom:10px;}
     
-    /* Hotkey Info Panel */
     .metrics{display:flex;gap:15px;font-size:14px;margin-bottom:15px;background:#222;padding:10px;border-radius:8px;}
     .metric{color:var(--orange); font-weight:bold;}
+    #key-buffer { color: #fff; background: #444; padding: 2px 8px; border-radius: 4px; margin-left: 5px; }
 
     .db-table{width:100%;border-collapse:collapse;font-size:13px;margin-top:20px;}
     .db-table th{background:#222;color:var(--orange);padding:10px;text-align:left;}
@@ -22,24 +21,20 @@
     .db-table input{background:#000;color:#fff;border:1px solid #333;width:95%;padding:6px;font-size:13px;}
     
     .manual-show{background:var(--blue);color:#fff;border:none;padding:8px;border-radius:4px;cursor:pointer;font-size:11px;width:100%;font-weight:bold;}
-    .manual-show:active{background:var(--green);}
   </style>
 </head>
 <body>
 <div id="admin">
-  <div id="status" class="status">HOTKEY MODE ACTIVE: USE NUMPAD 1-9 OR BUTTONS</div>
+  <div id="status" class="status">25-SLOT HOTKEY MODE: TYPE DIGITS FAST (e.g., '1' then '4' for Slot 14)</div>
 
   <div class="metrics">
-    <div class="metric">LAST SENT SLOT: <span id="mWin">-</span></div>
-    <div class="metric">HOTKEYS: NUMPAD [1-9]</div>
+    <div class="metric">LAST SENT: <span id="mWin">-</span></div>
+    <div class="metric">KEYBOARD INPUT: <span id="key-buffer">NONE</span></div>
   </div>
 
   <div class="btn-group">
     <button class="btn" style="background:var(--blue)" onclick="window.open('view.html','_blank')">OPEN VIEW WINDOW</button>
   </div>
-
-  <textarea id="import-area" placeholder="1 | TEAM K9&#10;2 | TEAM XYZ"></textarea>
-  <button class="btn" style="background:#333;width:100%;margin-bottom:20px;" onclick="importSlots()">UPDATE SLOT LIST</button>
 
   <table class="db-table">
     <thead><tr><th>#</th><th>ACTION</th><th>TEAM NAME</th><th>LOGO/TEXT</th><th>BG COLOR</th></tr></thead>
@@ -50,6 +45,10 @@
 <script>
   const FIREBASE_URL = "https://bgmi-overlay-default-rtdb.firebaseio.com/liveData.json";
   let teamDB = JSON.parse(localStorage.getItem('bgmi_v23_db') || '{}');
+  
+  // Hotkey Variables
+  let inputBuffer = "";
+  let bufferTimeout = null;
 
   function renderTableFull(){
     const tb = document.getElementById('dbBody');
@@ -59,7 +58,7 @@
       const t=teamDB[i];
       tb.innerHTML += `<tr>
         <td><b>${i}</b></td>
-        <td><button class="manual-show" onclick="sendSlot(${i})">SEND (HOTKEY ${i})</button></td>
+        <td><button class="manual-show" onclick="sendSlot(${i})">SEND SLOT ${i}</button></td>
         <td><input value="${t.name}" onchange="updateDB(${i},'name',this.value)"></td>
         <td><input value="${t.logo}" onchange="updateDB(${i},'logo',this.value)"></td>
         <td><input type="color" value="${t.sbg}" onchange="updateDB(${i},'sbg',this.value)"></td>
@@ -71,29 +70,13 @@
   function saveDB(){ localStorage.setItem('bgmi_v23_db',JSON.stringify(teamDB)); }
   function updateDB(i,k,v){ teamDB[i][k]=v; saveDB(); }
 
-  function importSlots(){
-    const text=document.getElementById('import-area').value;
-    text.split('\n').forEach(line=>{
-      const m=line.match(/(\d+)\s*[|•-]\s*(.+)/);
-      if(m && (slot=parseInt(m[1],10))>=1 && slot<=25){
-        if(!teamDB[slot]) teamDB[slot]={};
-        teamDB[slot].name=m[2].trim();
-      }
-    });
-    saveDB(); renderTableFull();
-    document.getElementById('status').textContent="SLOT LIST UPDATED";
-  }
-
   function sendSlot(slot){
+    if(slot < 1 || slot > 25) return;
     const t=teamDB[slot];
     if(!t) return;
     
     const payload = {slot, name:t.name, logo:t.logo, sbg:t.sbg, ts:Date.now()};
-    
-    // Local storage push for local view
     localStorage.setItem('bgmi_v23_push', JSON.stringify(payload));
-    
-    // Firebase push for remote view
     pushToFirebase(payload);
 
     document.getElementById('status').textContent=`✅ SENT: ${t.name} (SLOT ${slot})`;
@@ -103,23 +86,30 @@
   async function pushToFirebase(payload){
     try{
       await fetch(FIREBASE_URL,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
-    }catch(e){console.log("Firebase push failed",e);}
+    }catch(e){console.log("Firebase error",e);}
   }
 
-  // --- HOTKEY LOGIC ---
+  // --- MULTI-DIGIT HOTKEY LOGIC ---
   window.addEventListener('keydown', (e) => {
-    // Check if user is typing in an input box (don't trigger hotkey then)
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
 
-    // Numpad or Top Row numbers 1-9
-    if (e.key >= '1' && e.key <= '9') {
-      const slot = parseInt(e.key);
-      sendSlot(slot);
-    }
-    
-    // Optional: Press '0' to clear or hide (Optional logic)
-    if (e.key === '0') {
-      document.getElementById('status').textContent = "READY: WAITING FOR HOTKEY";
+    // Listen for numbers 0-9
+    if (e.key >= '0' && e.key <= '9') {
+      clearTimeout(bufferTimeout);
+      inputBuffer += e.key;
+      document.getElementById('key-buffer').textContent = inputBuffer;
+
+      // Agar 0.5 seconds tak dusra key nahi dabaya, toh process karlo
+      bufferTimeout = setTimeout(() => {
+        const slot = parseInt(inputBuffer);
+        if (slot >= 1 && slot <= 25) {
+          sendSlot(slot);
+        } else {
+          document.getElementById('status').textContent = "⚠️ INVALID SLOT: USE 1-25";
+        }
+        inputBuffer = "";
+        document.getElementById('key-buffer').textContent = "NONE";
+      }, 500); 
     }
   });
 
